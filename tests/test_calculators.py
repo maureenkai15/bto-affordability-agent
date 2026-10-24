@@ -174,3 +174,9 @@ def test_tengah_price_lookup():
 
 def test_unknown_project_returns_error():
     assert "error" in get_project_price("nowhere")
+
+
+def test_sourced_items_cover_unverified_items():
+    items = policy.sourced_items()
+    assert {i["rule"] for i in items if not i["verified"]} == set(policy.unverified_items())
+    assert any(i["rule"] == "hdb_loan.assessment_rate_floor" and i["verified"] for i in items)

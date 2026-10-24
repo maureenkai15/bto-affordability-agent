@@ -15,7 +15,7 @@ Most couples in their 20s piece this question together from HDB pages, CPF pages
 
 | Mode | Needs | Cost |
 | --- | --- | --- |
-| **Form** (default) | nothing | free: runs the Python calculators directly |
+| **Calculator** (default) | nothing | free: live sliders run the Python calculators directly |
 | **Chat** | an Anthropic API key in `.env` or Streamlit Secrets | paid per token (Claude Pro does not cover the API) |
 
 Both modes use the same calculators and the same breakdown panel. Without a key, chat mode is switched off and the app never calls the API, so the public demo costs nothing.
@@ -80,10 +80,10 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, option
 
 `tests/test_scenarios.py` covers eight real households: a typical dual-income couple, a couple just above the $9,000 grant cliff, a couple eligible only under the new $16,000 ceiling, a couple above it, a single-income household where the 30% MSR binds, a single aged 35+, a citizen + PR couple, and low-CPF vs high-CPF households. Plus an older buyer whose loan tenure shrinks while waiting for keys.
 
-`tests/test_app.py` runs the Streamlit app headlessly in form mode with the 3 sidebar examples (hand-checked numbers) and asserts the API client is never created.
+`tests/test_app.py` runs the Streamlit app headlessly in calculator mode with the 3 examples, live slider updates (hand-checked numbers) and asserts the API client is never created.
 
 ```
-65 passed
+68 passed
 ```
 
 ## Run it
@@ -92,8 +92,8 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, option
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pytest                             # 65 tests, no API key needed
-streamlit run app.py               # web app, free form mode
+pytest                             # 68 tests, no API key needed
+streamlit run app.py               # web app, free calculator mode
 
 # Optional, paid: chat mode
 cp .env.example .env               # then paste your Anthropic API key
@@ -104,7 +104,7 @@ python cli.py                      # chat in the terminal (or use Chat mode in t
 
 ```
 bto-agent/
-├── app.py                 Streamlit UI: form or chat + waterfall chart + MSR bar + tool-call log
+├── app.py                 Streamlit UI: live calculator or chat, verdict card, 4 chart tabs, sources table
 ├── cli.py                 Terminal version
 ├── policy_2026.yaml       Every policy number, with source and as-of date
 ├── agent/

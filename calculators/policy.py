@@ -61,3 +61,24 @@ def unverified_items() -> list[str]:
 
     walk(load_policy(), [])
     return out
+
+
+def sourced_items() -> list[dict[str, Any]]:
+    """Every policy node that carries a verified flag, with its source, for the UI's sources table."""
+    out: list[dict[str, Any]] = []
+
+    def walk(n: Any, path: list[str]) -> None:
+        if isinstance(n, dict):
+            if "verified" in n:
+                out.append({
+                    "rule": ".".join(path),
+                    "verified": n["verified"],
+                    "source_url": n.get("source_url"),
+                    "confirmed_by": n.get("confirmed_by"),
+                    "note": n.get("note"),
+                })
+            for k, v in n.items():
+                walk(v, path + [str(k)])
+
+    walk(load_policy(), [])
+    return out
