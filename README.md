@@ -46,10 +46,13 @@ flowchart LR
 
 1. **Eligibility:** combined gross monthly income ≤ $16,000 for families (≤ $8,000 for singles aged 35+).
 2. **Grant:** Enhanced CPF Housing Grant from HDB's 16-band income table, up to $120,000.
-3. **HDB loan:** the smallest of three limits:
+3. **Loan** (HDB or bank): the smallest of these limits:
    - 75% of the flat price (LTV)
    - the loan whose instalment is 30% of gross income (MSR), sized at HDB's 3.0% interest rate floor
    - price minus grants (what you actually need)
+   - the amount you choose to borrow, if less
+
+   Bank loans are sized at MAS's 4% stress-test rate and need at least 5% of the price in cash.
 
    Tenure is the shorter of 25 years and 65 minus the applicants' average age at key collection.
 4. **Instalment:** standard annuity formula at the actual 2.6% p.a. (so an MSR-bound loan uses about 29% of income, not 30%)
@@ -74,7 +77,18 @@ flowchart LR
 | Mortgage stamp duty | 0.4% of loan, max $500 | same |
 | Option fee | $500 (2-room Flexi) / $1,000 (3-room) / $2,000 (4-room+) | HDB Annex B, Feb 2026 BTO exercise |
 | BTO application fee | $10 | HDB "Application for a New Flat" (updated 22 Oct 2026) |
-| Tengah Garden Ave 4-room | ~$360k–$380k indicative (Nov 2026 exercise) | [SG Property Index](https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/) |
+| Bank loan (HDB flat) | LTV 75% (55% if > 25 years or past age 65), min 5% cash, max 30 years | [MAS](https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits) |
+| Bank stress-test rate | 4% (MSR loan size) | [MAS, Sep 2022](https://www.mas.gov.sg/news/media-releases/2022/measures-to-promote-sustainable-conditions-in-the-property-market-by-ensuring-prudent-borrowing-and-moderating-demand) |
+| Downpayment at signing | 10% (HDB loan) / 20% (bank) / 2.5% (deferred income assessment) | HDB Annex B, Feb 2026 BTO |
+| Bank rate (input default) | 1.60% market snapshot, 23 Oct 2026 | [Redbrick](https://www.redbrick.sg/blog/best-home-loan-singapore/) |
+
+## BTO projects (20 projects, 11 towns)
+
+| Status | Projects | Prices |
+| --- | --- | --- |
+| Launched, Feb 2026 | Sembawang Voyage, Sembawang Deck, Tampines Bliss, Tampines Nova, Kim Keat Crest, Redhill Peaks | [HDB Annex A](https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf) |
+| Launched, Jun 2026 | Sembawang Portico, Sembawang Brook, Woodgrove Acres, Kebun Baru Ridge, Kebun Baru Breeze, Lakeview Cascadia, Berlayar Rise | [HDB Annex A](https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf) |
+| Upcoming, Nov 2026 | Bedok Bayshore (x2), Geylang Mattar, Toa Payoh Caldecott, Tengah, Yishun Chencharu, Sembawang North | Not released. Each shows a named launched comparable (same expected classification) as a labelled reference; Tengah 4-room uses a [third-party estimate](https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/) |
 
 Values marked `verified: false` in `policy_2026.yaml` (currently only the legal fee estimate) are shown as warnings in the app until confirmed on hdb.gov.sg and iras.gov.sg.
 
@@ -85,7 +99,7 @@ Values marked `verified: false` in `policy_2026.yaml` (currently only the legal 
 `tests/test_app.py` runs the Streamlit app headlessly in calculator mode with the 3 examples, live slider updates (hand-checked numbers) and asserts the API client is never created.
 
 ```
-78 passed
+100 passed
 ```
 
 ## Run it
@@ -94,7 +108,7 @@ Values marked `verified: false` in `policy_2026.yaml` (currently only the legal 
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pytest                             # 78 tests, no API key needed
+pytest                             # 100 tests, no API key needed
 streamlit run app.py               # web app, free calculator mode
 
 # Optional, paid: chat mode
@@ -106,7 +120,7 @@ python cli.py                      # chat in the terminal (or use Chat mode in t
 
 ```
 bto-agent/
-├── app.py                 Streamlit UI: live calculator or chat, verdict card, 4 chart tabs, sources table
+├── app.py                 Streamlit UI: project map, live calculator or chat, verdict, 6 result tabs
 ├── cli.py                 Terminal version
 ├── policy_2026.yaml       Every policy number, with source and as-of date
 ├── agent/
@@ -123,6 +137,8 @@ bto-agent/
 
 - Prices for the November 2026 exercise are indicative until HDB publishes them at launch.
 - Assumes first-timers and that current income equals the 12-month average HDB uses.
+- Upcoming project prices are references (a comparable launched project), not HDB prices.
+- Bank rates are user inputs; real packages change after a lock-in period.
 - Two or more singles buying together (family grant table, $9,000 ceiling) is not modelled yet.
 - Does not model the Proximity Housing Grant (resale only), resale flats, bank loans or ECs.
 - Downpayment staging (signing vs key collection) is not modelled; the tool shows the total.

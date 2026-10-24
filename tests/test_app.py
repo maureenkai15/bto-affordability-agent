@@ -93,3 +93,42 @@ def test_start_over_restores_defaults(no_key):
     at = click(start(), "💼  One income · $4k")
     at = click(at, "↺  Start over")
     assert {m.label: m.value for m in at.metric}["HDB loan"] == "$270,000"
+
+
+def test_picking_a_project_sets_hdb_price(no_key):
+    at = start()
+    at.selectbox(key="f_project").set_value("kim-keat-crest").run()
+    assert not at.exception
+    assert at.session_state["f_flat_type"] == "4-room"
+    assert at.slider(key="f_price").value == 455000            # HDB Feb 2026 Annex A, 4-room low end
+
+
+def test_bank_loan_hand_checked(no_key):
+    at = start()
+    at.session_state["f_lender"] = "bank"
+    at.session_state["f_bank_rate"] = 1.6
+    at.run()
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics["Bank loan"] == "$270,000"                  # 75% LTV binds
+    assert metrics["Monthly instalment"] == "$1,093"           # 270,000 at 1.6% over 25 years = 1,092.56
+
+
+def test_bank_30_year_tenure_drops_ltv(no_key):
+    at = start()
+    at.session_state["f_lender"] = "bank"
+    at.run()
+    at.slider(key="f_tenure").set_value(30).run()
+    assert {m.label: m.value for m in at.metric}["Bank loan"] == "$198,000"  # 55% x 360,000
+
+
+def test_borrow_less(no_key):
+    at = start()
+    at.toggle(key="f_borrow_max").set_value(False).run()
+    at.slider(key="f_borrow").set_value(200000).run()
+    assert {m.label: m.value for m in at.metric}["HDB loan"] == "$200,000"
+
+
+def test_comparison_tab_shows_both_lenders(no_key):
+    at = start()
+    frames = [d for d in at.dataframe if "🏦 Bank loan" in d.value.columns]
+    assert frames and len(frames[0].value) == 10

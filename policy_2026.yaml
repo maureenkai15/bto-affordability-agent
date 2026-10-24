@@ -123,6 +123,62 @@ hdb_loan:
     confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
 
+# Bank (financial institution) loans for an HDB flat. MSR 30% also applies (hdb_loan.msr).
+bank_loan:
+  max_tenure_years:
+    value: 30
+    note: "Maximum tenure for a bank loan on an HDB flat."
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    confirmed_by: 'MAS explainer "Loan Tenure and Loan-to-Value Limits" (last updated 27 Mar 2024)'
+    verified: true
+  ltv:
+    value: 0.75
+    note: "First housing loan. HDB Annex B (Feb 2026) also states the FI LTV limit is 75%."
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    verified: true
+  ltv_reduced:
+    value: 0.55
+    note: "Applies if the tenure exceeds 25 years (HDB flats) or the loan runs past age 65, using the income-weighted average age of joint borrowers."
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    verified: true
+  ltv_tenure_threshold_years:
+    value: 25
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    verified: true
+  age_limit:
+    value: 65
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    verified: true
+  min_cash_downpayment:
+    at_full_ltv: 0.05
+    at_reduced_ltv: 0.10
+    note: "Share of the price that must be paid in cash (not CPF): 5% at 75% LTV, 10% at 55% LTV."
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/loan-tenure-and-loan-to-value-limits"
+    verified: true
+  assessment_rate_floor:
+    value: 0.04
+    effective_from: "2022-09-30"
+    note: "MAS medium-term interest rate floor used by banks to compute MSR/TDSR (higher of 4% or the actual rate)."
+    source_url: "https://www.mas.gov.sg/news/media-releases/2022/measures-to-promote-sustainable-conditions-in-the-property-market-by-ensuring-prudent-borrowing-and-moderating-demand"
+    verified: true
+  indicative_rate:
+    value: 0.016
+    as_of: "2026-10-23"
+    note: "Default for the bank-rate input only: market snapshot of advertised 2-year fixed packages (about 1.60-1.65%, 19 Oct 2026); lowest floating packages near 1.45% (23 Oct 2026). Rates change daily and depend on the bank's approval. Not an offer."
+    source_url: "https://www.redbrick.sg/blog/best-home-loan-singapore/"
+    verified: true
+
+# When payments fall due for a new flat (percent of the flat price).
+payment_stages:
+  downpayment_at_signing:
+    hdb_loan: 0.10
+    bank_loan: 0.20
+    deferred_income_assessment: 0.025
+    note: "Paid at the Agreement for Lease signing, by CPF and/or cash; the option fee counts towards it. Eligible young couples under deferred income assessment pay 2.5%. The balance is due at key collection, when the HDB loan is disbursed."
+    source_url: "https://www.hdb.gov.sg"
+    confirmed_by: 'HDB Annex B, Administrative details for February 2026 BTO and SBF exercises, para 15 and footnotes 4-5; checked 24 Oct 2026'
+    verified: true
+
 upfront:
   option_fee:
     note: "BTO option fee by flat type. Forms part of the downpayment."
@@ -166,15 +222,304 @@ upfront:
     note: "Rough placeholder for conveyancing and misc fees. Users should replace with a quote."
     verified: false
 
-# Indicative prices before grants. Final prices only at launch.
+# BTO projects. Launched projects: HDB Annex A indicative price ranges (99-year lease, excluding grants, including
+# floor finishes where HDB provides them). 2-room Flexi combines Type 1 (40 sqm) low and Type 2 (48/49 sqm) high, as in
+# HDB's own comparison tables. Upcoming projects have no prices until launch: each names a launched "comparable"
+# (same expected classification, nearby or similar estate) whose prices are shown as a clearly labelled reference.
+# Locations are approximate, for the map only.
 projects:
+  sembawang-voyage:
+    name: "Sembawang Voyage"
+    town: "Sembawang"
+    region: "North"
+    classification: "Standard"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "44"
+    units: 1173
+    location: {lat: 1.4565, lon: 103.824}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 150000, high: 228000}
+      4-room: {low: 304000, high: 422000}
+      5-room: {low: 439000, high: 582000}
+  sembawang-deck:
+    name: "Sembawang Deck"
+    town: "Sembawang"
+    region: "North"
+    classification: "Standard"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "33"
+    units: 777
+    location: {lat: 1.453, lon: 103.83}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 158000, high: 237000}
+      3-room: {low: 261000, high: 343000}
+      4-room: {low: 338000, high: 426000}
+      5-room: {low: 479000, high: 585000}
+  tampines-bliss:
+    name: "Tampines Bliss"
+    town: "Tampines"
+    region: "East"
+    classification: "Standard"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "23"
+    units: 284
+    location: {lat: 1.362, lon: 103.948}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      3-room: {low: 363000, high: 444000}
+      4-room: {low: 481000, high: 600000}
+  tampines-nova:
+    name: "Tampines Nova"
+    town: "Tampines"
+    region: "East"
+    classification: "Plus"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "32"
+    units: 255
+    location: {lat: 1.354, lon: 103.942}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 197000, high: 292000}
+      4-room: {low: 459000, high: 602000}
+  kim-keat-crest:
+    name: "Kim Keat Crest"
+    town: "Toa Payoh"
+    region: "Central"
+    classification: "Plus"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "37"
+    units: 1151
+    location: {lat: 1.33, lon: 103.856}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 203000, high: 304000}
+      3-room: {low: 356000, high: 450000}
+      4-room: {low: 455000, high: 624000}
+  redhill-peaks:
+    name: "Redhill Peaks"
+    town: "Bukit Merah"
+    region: "Central"
+    classification: "Prime"
+    exercise: "February 2026 BTO"
+    status: "launched"
+    waiting_time_months: "55"
+    units: 1052
+    location: {lat: 1.288, lon: 103.817}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/hdb-launches-9012-flats-in-february-2026-bto-and-sbf-exercises/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 215000, high: 373000}
+      3-room: {low: 385000, high: 537000}
+      4-room: {low: 563000, high: 783000}
+  sembawang-portico:
+    name: "Sembawang Portico"
+    town: "Sembawang"
+    region: "North"
+    classification: "Standard"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "31"
+    units: 875
+    location: {lat: 1.459, lon: 103.818}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 142000, high: 225000}
+      3-room: {low: 250000, high: 344000}
+      4-room: {low: 320000, high: 437000}
+      5-room: {low: 465000, high: 579000}
+  sembawang-brook:
+    name: "Sembawang Brook"
+    town: "Sembawang"
+    region: "North"
+    classification: "Standard"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "33"
+    units: 1160
+    location: {lat: 1.45, lon: 103.82}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 139000, high: 218000}
+      3-room: {low: 257000, high: 333000}
+      4-room: {low: 302000, high: 428000}
+      5-room: {low: 420000, high: 571000}
+      3gen: {low: 468000, high: 567000}
+  woodgrove-acres:
+    name: "Woodgrove Acres"
+    town: "Woodlands"
+    region: "North"
+    classification: "Standard"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "42"
+    units: 656
+    location: {lat: 1.43, lon: 103.78}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 137000, high: 211000}
+      3-room: {low: 260000, high: 325000}
+      4-room: {low: 353000, high: 437000}
+      5-room: {low: 472000, high: 582000}
+  kebun-baru-ridge:
+    name: "Kebun Baru Ridge"
+    town: "Ang Mo Kio"
+    region: "North-East"
+    classification: "Plus"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "37"
+    units: 485
+    location: {lat: 1.373, lon: 103.838}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      3-room: {low: 380000, high: 492000}
+      4-room: {low: 543000, high: 693000}
+  kebun-baru-breeze:
+    name: "Kebun Baru Breeze"
+    town: "Ang Mo Kio"
+    region: "North-East"
+    classification: "Plus"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "52"
+    units: 579
+    location: {lat: 1.37, lon: 103.833}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 191000, high: 349000}
+      4-room: {low: 547000, high: 746000}
+  lakeview-cascadia:
+    name: "Lakeview Cascadia"
+    town: "Bishan"
+    region: "Central"
+    classification: "Prime"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "51"
+    units: 1221
+    location: {lat: 1.36, lon: 103.83}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 216000, high: 361000}
+      4-room: {low: 534000, high: 742000}
+  berlayar-rise:
+    name: "Berlayar Rise"
+    town: "Bukit Merah"
+    region: "Central"
+    classification: "Prime"
+    exercise: "June 2026 BTO"
+    status: "launched"
+    waiting_time_months: "49-54"
+    units: 1976
+    location: {lat: 1.272, lon: 103.801}
+    source_url: "https://www.hdb.gov.sg/-/media/hdb-pulse/news/2026/20260617-HDB-Launches-6952-Flats-Across-7-Projects-in-June-2026-BTO-Sales-Exercise/Annex-A.pdf"
+    verified: true
+    prices:
+      2-room: {low: 247000, high: 406000}
+      3-room: {low: 435000, high: 591000}
+      4-room: {low: 592000, high: 810000}
+  bedok-bayshore-1:
+    name: "Bayshore (project 1)"
+    town: "Bedok"
+    region: "East"
+    classification: "Plus (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 860
+    flat_types: [2-room, 4-room]
+    comparable: "tampines-nova"
+    location: {lat: 1.314, lon: 103.942}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
+  bedok-bayshore-2:
+    name: "Bayshore (project 2)"
+    town: "Bedok"
+    region: "East"
+    classification: "Plus (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 1640
+    flat_types: [2-room, 3-room, 4-room]
+    comparable: "kim-keat-crest"
+    location: {lat: 1.3125, lon: 103.947}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
+  geylang-mattar:
+    name: "Mattar"
+    town: "Geylang"
+    region: "Central"
+    classification: "Plus (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 440
+    flat_types: [2-room, 4-room]
+    comparable: "kim-keat-crest"
+    location: {lat: 1.327, lon: 103.883}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
+  toa-payoh-caldecott:
+    name: "Caldecott"
+    town: "Toa Payoh"
+    region: "Central"
+    classification: "Prime (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 1430
+    flat_types: [2-room, 4-room]
+    comparable: "lakeview-cascadia"
+    location: {lat: 1.337, lon: 103.84}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
   tengah-garden-avenue:
     name: "Tengah Garden Avenue (name TBC)"
     town: "Tengah"
-    exercise: "November 2026 BTO (moved from October)"
+    region: "West"
     classification: "Standard (expected)"
-    mop_years: 5
-    status: "indicative"
-    source_url: "https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/"
-    prices:
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 710
+    flat_types: [2-room, 3-room, 4-room, 5-room, 3gen]
+    comparable: "sembawang-brook"
+    location: {lat: 1.355, lon: 103.735}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
+    estimate_source_url: "https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/"
+    estimates:
       4-room: {low: 360000, high: 380000}
+  yishun-chencharu:
+    name: "Chencharu"
+    town: "Yishun"
+    region: "North"
+    classification: "Standard (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 1580
+    flat_types: [2-room, 3-room, 4-room, 5-room]
+    comparable: "woodgrove-acres"
+    location: {lat: 1.418, lon: 103.833}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"
+  sembawang-north:
+    name: "Sembawang North"
+    town: "Sembawang"
+    region: "North"
+    classification: "Standard (expected)"
+    exercise: "November 2026 BTO"
+    status: "upcoming"
+    units: 1310
+    flat_types: [2-room, 3-room, 4-room, 5-room]
+    comparable: "sembawang-brook"
+    location: {lat: 1.462, lon: 103.826}
+    source_url: "https://stackedhomes.com/we-review-the-november-2026-bto-launch-sites/"

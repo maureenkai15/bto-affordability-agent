@@ -11,10 +11,13 @@ Purpose: help Singapore adults check if they can afford a BTO flat, using 2026 H
 - Keep it small: Python 3.11+, anthropic, streamlit, plotly, pyyaml, pytest.
 
 ## Layout
-- calculators/ — eligibility, grants (EHG), loan (LTV/MSR/tenure), upfront (stamp duty, option fee), cash (waterfall), assess (chains all)
+- calculators/ — eligibility, grants (EHG), loan (HDB + bank: LTV/MSR/tenure/interest), upfront (stamp duty, option fee), cash (waterfall, payment stages), assess (projects + chains all)
 - agent/ — tools.py (schemas + dispatcher), agent.py (tool-use loop + system prompt)
 - app.py — Streamlit UI (free live calculator by default; chat mode only with a real API key); cli.py — terminal chat
 - tests/ — unit tests, test_scenarios.py (8 households), test_agent_loop.py (fake client), test_app.py (form mode, no API)
+
+## When a new BTO exercise launches
+Add its projects from HDB's Annex A (prices, units, waiting time) to policy_2026.yaml `projects`, mark upcoming ones launched, and update tests that pin prices.
 
 ## When HDB rules change
 1. Edit policy_2026.yaml (value, source_url, date, verified: true).

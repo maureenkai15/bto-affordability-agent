@@ -10,6 +10,7 @@ from calculators import (
     check_eligibility,
     get_ehg_grant,
     get_project_price,
+    list_projects,
     max_loan,
     upfront_costs,
 )
@@ -21,7 +22,8 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "get_project_price",
         "description": "Look up indicative BTO prices for a known project. Use before any maths that needs a flat price, "
-                       "unless the user gives a price. Known project ids: 'tengah-garden-avenue'.",
+                       "unless the user gives a price. Call list_projects first to find project ids. Upcoming projects "
+                       "have no official prices yet; the result's price_basis says what is shown instead.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -31,6 +33,12 @@ TOOLS: list[dict[str, Any]] = [
             },
             "required": ["project_id"],
         },
+    },
+    {
+        "name": "list_projects",
+        "description": "List known BTO projects across Singapore (launched 2026 and upcoming November 2026): id, name, "
+                       "town, region, classification, status and flat types.",
+        "input_schema": {"type": "object", "properties": {}},
     },
     {
         "name": "check_eligibility",
@@ -126,6 +134,11 @@ TOOLS: list[dict[str, Any]] = [
                 "monthly_savings": {"type": "number"},
                 "all_singapore_citizens": {"type": "boolean"},
                 "first_timers": {"type": "boolean"},
+                "lender": {"type": "string", "enum": ["hdb", "bank"], "description": "HDB loan (default) or bank loan."},
+                "bank_rate": {"type": "number", "description": "Bank interest rate as a decimal, e.g. 0.016. "
+                                                               "Ask the user; omit to use the market snapshot."},
+                "tenure_years": {"type": "integer", "description": "Shorter tenure than the maximum, if wanted."},
+                "desired_loan": {"type": "number", "description": "Borrow less than the maximum, if wanted."},
             },
             "required": ["household_type", "incomes", "ages", "cpf_oa_balances", "cash_savings", "flat_price"],
         },
@@ -134,6 +147,7 @@ TOOLS: list[dict[str, Any]] = [
 
 _DISPATCH: dict[str, Callable[..., dict]] = {
     "get_project_price": get_project_price,
+    "list_projects": list_projects,
     "check_eligibility": check_eligibility,
     "get_ehg_grant": get_ehg_grant,
     "max_loan": max_loan,
@@ -143,7 +157,7 @@ _DISPATCH: dict[str, Callable[..., dict]] = {
 }
 
 
-def run_tool(name: str, tool_input: dict[str, Any]) -> tuple[dict, bool]:
+def run_tool(name: str, tool_input: dict[str, Any]) -> tuple[dict | list, bool]:
     """Execute a tool. Returns (result, is_error). Errors go back to the model so it can fix its inputs."""
     fn = _DISPATCH.get(name)
     if fn is None:
@@ -156,5 +170,5 @@ def run_tool(name: str, tool_input: dict[str, Any]) -> tuple[dict, bool]:
         return {"error": f"{type(e).__name__}: {e}"}, True
 
 
-def to_json(result: dict) -> str:
+def to_json(result: dict | list) -> str:
     return json.dumps(result, default=str)

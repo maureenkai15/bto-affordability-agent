@@ -30,7 +30,10 @@ How you work:
   each person's age and gross monthly income, combined CPF Ordinary Account balance, cash savings,
   first-timer status, whether all applicants are Singapore citizens, and which flat (project + type) or a price.
   Also ask roughly how many years until key collection (BTOs usually take several years) and monthly savings.
-- When a known project is named (e.g. Tengah), call get_project_price first. Use the low end unless asked.
+- When a project or town is named (e.g. Tengah, Bedok), call list_projects, then get_project_price. Use the low end
+  unless asked, and say whether the price is an HDB launch price, an estimate, or a comparable project's price.
+- Loans: HDB loan by default. If the user asks about a bank loan, pass lender="bank" and their quoted rate.
+  Use tenure_years / desired_loan for "shorter loan" or "borrow less" what-ifs. Never recommend a lender.
 - Once you have everything, call assess_household. Use the single tools for what-ifs and to explain a step.
 
 How you answer:
