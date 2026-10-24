@@ -53,8 +53,8 @@ def test_example_couple_hand_checked(no_key):
     metrics = {m.label: m.value for m in at.metric}
     assert metrics["Grant (EHG)"] == "$20,000"     # $7,501-$8,000 band
     assert metrics["HDB loan"] == "$270,000"       # 75% LTV of $360,000
-    # cash left = 50,000 - (25,000 downpayment after CPF + 10,400 upfront)
-    assert "Cash left after buying: $14,600" in at.success[0].value
+    # cash left = 50,000 - (25,000 downpayment after CPF + 10,910 upfront)
+    assert "Cash left after buying: $14,090" in at.success[0].value
     assert any("AFFORDABLE" in m.value for m in at.markdown)
 
 

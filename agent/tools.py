@@ -79,10 +79,12 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "upfront_costs",
-        "description": "One-off costs: option fee, buyer's stamp duty, legal/misc estimate.",
+        "description": "One-off costs: option fee, buyer's stamp duty, mortgage stamp duty, application fee, "
+                       "legal/misc estimate.",
         "input_schema": {
             "type": "object",
-            "properties": {"flat_price": {"type": "number"}, "flat_type": {"type": "string"}},
+            "properties": {"flat_price": {"type": "number"}, "flat_type": {"type": "string"},
+                           "loan": {"type": "number", "description": "HDB loan amount, for mortgage stamp duty."}},
             "required": ["flat_price"],
         },
     },

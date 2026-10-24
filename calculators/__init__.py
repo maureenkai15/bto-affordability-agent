@@ -4,7 +4,7 @@ from .cash import cash_gap, months_to_close_gap
 from .eligibility import check_eligibility
 from .grants import get_ehg_grant
 from .loan import loan_tenure, max_loan, monthly_instalment
-from .upfront import buyer_stamp_duty, upfront_costs
+from .upfront import buyer_stamp_duty, mortgage_stamp_duty, upfront_costs
 
 __all__ = [
     "assess_household",
@@ -17,5 +17,6 @@ __all__ = [
     "max_loan",
     "monthly_instalment",
     "months_to_close_gap",
+    "mortgage_stamp_duty",
     "upfront_costs",
 ]

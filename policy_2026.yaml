@@ -118,9 +118,11 @@ upfront:
       5-room: 2000
       3gen: 2000
   buyer_stamp_duty:
-    note: "IRAS residential BSD tiers (marginal)."
+    note: "IRAS residential BSD tiers (marginal). Tiers up to $1.5M (1/2/3/4%) confirmed on HDB's resale approval page (updated 18 Aug 2026), which covers every HDB price. Above $1.5M HDB lists 5% for the remainder; the 5%/6% split here follows IRAS and is not used for HDB flats."
     source_url: "https://www.iras.gov.sg"
-    verified: false
+    confirmed_by: 'HDB "Approval of Resale Flat Application for Buyers" page, Stamp duty (last updated 18 Aug 2026; text checked 24 Oct 2026)'
+    verified_up_to: 1500000
+    verified: true
     tiers:
       - {up_to: 180000, rate: 0.01}
       - {up_to: 360000, rate: 0.02}
@@ -128,6 +130,19 @@ upfront:
       - {up_to: 1500000, rate: 0.04}
       - {up_to: 3000000, rate: 0.05}
       - {up_to: null, rate: 0.06}
+  mortgage_stamp_duty:
+    rate: 0.004
+    max: 500
+    note: "Stamp duty on the mortgage: 0.40% of the loan granted, up to $500. Only if taking a housing loan."
+    source_url: "https://www.hdb.gov.sg"
+    confirmed_by: 'HDB "Approval of Resale Flat Application for Buyers" page, Stamp duty (last updated 18 Aug 2026; text checked 24 Oct 2026)'
+    verified: true
+  application_fee:
+    value: 10
+    note: "Non-refundable administrative fee per BTO application, inclusive of GST."
+    source_url: "https://www.hdb.gov.sg"
+    confirmed_by: 'HDB "Application for a New Flat" page (last updated 22 Oct 2026; text checked 24 Oct 2026)'
+    verified: true
   legal_and_misc_estimate:
     value: 3000
     note: "Rough placeholder for conveyancing and misc fees. Users should replace with a quote."

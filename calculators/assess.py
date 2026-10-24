@@ -64,7 +64,7 @@ def assess_household(
         loan = {"loan": 0.0, "binding_limit": "ineligible", "binding_limit_label": "not eligible for HDB loan",
                 "monthly_instalment": 0.0, "tenure_years": 0, "msr_used_pct": None}
 
-    upfront = upfront_costs(flat_price, flat_type)
+    upfront = upfront_costs(flat_price, flat_type, loan["loan"])
     cash_buffer = EMERGENCY_BUFFER_MONTHS * loan["monthly_instalment"]
     cash = cash_gap(
         flat_price=flat_price,
@@ -106,7 +106,7 @@ def assess_household(
             f"{policy.value('hdb_loan', 'assessment_rate_floor'):.1%} interest rate floor, as HDB does.",
             "CPF OA balances are used for the downpayment before cash.",
             f"You should keep {EMERGENCY_BUFFER_MONTHS} months of instalments as emergency cash.",
-            "Upfront costs (option fee, stamp duty, legal) are estimates.",
+            "Upfront costs include the option fee, buyer's and mortgage stamp duty, the application fee and a legal estimate.",
         ],
         "warnings": _warnings(ehg),
         "disclaimer": policy.value("meta", "disclaimer"),

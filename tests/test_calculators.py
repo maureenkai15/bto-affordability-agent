@@ -10,6 +10,8 @@ from calculators import (
     loan_tenure,
     max_loan,
     monthly_instalment,
+    mortgage_stamp_duty,
+    upfront_costs,
     months_to_close_gap,
 )
 from calculators import policy
@@ -122,6 +124,19 @@ def test_needed_binds_when_grants_are_large():
 @pytest.mark.parametrize("price, duty", [(180000, 1800), (360000, 5400), (380000, 6000), (0, 0)])
 def test_buyer_stamp_duty(price, duty):
     assert buyer_stamp_duty(price) == pytest.approx(duty)
+
+
+# 0.4% of the loan, capped at $500: $100,000 -> $400; $125,000 -> $500 (exactly the cap); $270,000 -> $500
+@pytest.mark.parametrize("loan, duty", [(100000, 400), (125000, 500), (270000, 500), (0, 0)])
+def test_mortgage_stamp_duty(loan, duty):
+    assert mortgage_stamp_duty(loan) == pytest.approx(duty)
+
+
+def test_upfront_costs_tengah_4room_hand_checked():
+    # option 2,000 + BSD 5,400 + mortgage duty 500 + application 10 + legal estimate 3,000 = 10,910
+    r = upfront_costs(360000, "4-room", loan=270000)
+    assert r["total"] == pytest.approx(10910)
+    assert upfront_costs(360000, "4-room")["mortgage_stamp_duty"] == 0  # no loan, no mortgage duty
 
 
 # ---------- cash ----------
