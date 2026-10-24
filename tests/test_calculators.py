@@ -1,0 +1,157 @@
+"""Unit tests with hand-checked expected values."""
+import pytest
+
+from calculators import (
+    buyer_stamp_duty,
+    cash_gap,
+    check_eligibility,
+    get_ehg_grant,
+    get_project_price,
+    loan_tenure,
+    max_loan,
+    monthly_instalment,
+    months_to_close_gap,
+)
+from calculators import policy
+
+
+# ---------- policy file sanity ----------
+
+def test_ehg_family_bands_are_decreasing_and_reach_ceiling():
+    bands = policy.node("ehg", "family")["bands"]
+    grants = [b["grant"] for b in bands]
+    assert grants == sorted(grants, reverse=True)
+    assert bands[-1]["max_income"] == policy.node("ehg", "family")["income_ceiling"] == 9000
+    assert bands[0]["grant"] == 120000
+
+
+def test_core_loan_rules_are_verified():
+    for key in ("interest_rate", "ltv", "msr", "max_tenure_years"):
+        assert policy.node("hdb_loan", key)["verified"] is True
+
+
+def test_income_ceiling_is_post_ndr_2026():
+    assert policy.value("income_ceilings", "family") == 16000
+    assert policy.value("hdb_loan", "ltv") == 0.75  # not the outdated 80%
+
+
+# ---------- EHG ----------
+
+@pytest.mark.parametrize(
+    "income, expected",
+    [(0, 120000), (1500, 120000), (1501, 110000), (4000, 80000), (8000, 20000),
+     (8500, 10000), (9000, 5000), (9001, 0), (15000, 0)],
+)
+def test_ehg_family_bands(income, expected):
+    assert get_ehg_grant("family", income)["grant"] == expected
+
+
+def test_ehg_second_timers_get_none():
+    assert get_ehg_grant("family", 3000, first_timers=False)["grant"] == 0
+
+
+def test_ehg_singles_half_scale_and_flagged():
+    r = get_ehg_grant("single", 4000)  # half of family $8,000 band -> $10,000
+    assert r["grant"] == 10000
+    assert r["verified"] is False
+    assert get_ehg_grant("single", 4600)["grant"] == 0
+
+
+# ---------- eligibility ----------
+
+def test_family_under_new_ceiling_is_eligible():
+    assert check_eligibility("family", 15500, [27, 28])["eligible"] is True
+
+
+def test_family_over_ceiling_is_not():
+    r = check_eligibility("family", 16001, [27, 28])
+    assert r["eligible"] is False
+    assert "ceiling" in r["reasons"][0]
+
+
+def test_single_under_35_is_not_eligible():
+    assert check_eligibility("single", 4000, [30])["eligible"] is False
+
+
+def test_single_35_within_ceiling_is_eligible():
+    assert check_eligibility("single", 7900, [35])["eligible"] is True
+
+
+# ---------- loan ----------
+
+def test_monthly_instalment_hand_checked():
+    # $400,000 at 2.6% over 25 years: r = 0.026/12, n = 300 -> $1,814.67
+    assert monthly_instalment(400000, 0.026, 25) == pytest.approx(1814.67, abs=0.5)
+
+
+def test_zero_principal_zero_instalment():
+    assert monthly_instalment(0) == 0
+
+
+@pytest.mark.parametrize("age, years", [(25, 25), (40, 25), (45, 20), (60, 5), (66, 0)])
+def test_tenure(age, years):
+    assert loan_tenure(age) == years
+
+
+def test_ltv_binds_for_high_income():
+    r = max_loan(flat_price=360000, grants=0, monthly_household_income=16000, oldest_applicant_age_at_loan=30)
+    assert r["binding_limit"] == "ltv"
+    assert r["loan"] == pytest.approx(270000)
+
+
+def test_msr_binds_for_single_low_income():
+    # $1,200/month can service ~ 1200 / 1814.67 * 400k = ~$264,500 over 25 years
+    r = max_loan(flat_price=360000, grants=80000, monthly_household_income=4000, oldest_applicant_age_at_loan=28)
+    assert r["binding_limit"] == "msr"
+    assert r["loan"] == pytest.approx(264508, rel=0.002)
+    assert r["monthly_instalment"] == pytest.approx(1200, abs=0.5)
+
+
+def test_needed_binds_when_grants_are_large():
+    r = max_loan(flat_price=200000, grants=120000, monthly_household_income=1500, oldest_applicant_age_at_loan=30)
+    assert r["binding_limit"] in ("needed", "msr")
+    assert r["loan"] <= 80000
+
+
+# ---------- upfront ----------
+
+@pytest.mark.parametrize("price, duty", [(180000, 1800), (360000, 5400), (380000, 6000), (0, 0)])
+def test_buyer_stamp_duty(price, duty):
+    assert buyer_stamp_duty(price) == pytest.approx(duty)
+
+
+# ---------- cash ----------
+
+def test_cash_gap_waterfall():
+    r = cash_gap(flat_price=360000, grants=20000, loan=270000, cpf_oa_total=45000,
+                 cash_savings=30000, upfront_total=10400)
+    assert r["downpayment"] == 70000
+    assert r["from_cpf_oa"] == 45000
+    assert r["cash_for_downpayment"] == 25000
+    assert r["total_cash_needed"] == 35400
+    assert r["gap"] == 5400
+    assert r["verdict"] == "gap"
+
+
+def test_cash_tight_when_below_buffer():
+    r = cash_gap(flat_price=360000, grants=20000, loan=270000, cpf_oa_total=70000,
+                 cash_savings=12000, upfront_total=10400, cash_buffer_target=7000)
+    assert r["gap"] == 0
+    assert r["verdict"] == "tight"
+
+
+def test_months_to_close_gap():
+    assert months_to_close_gap(5400, 1000) == 6
+    assert months_to_close_gap(0, 1000) == 0
+    assert months_to_close_gap(5400, 0) is None
+
+
+# ---------- project lookup ----------
+
+def test_tengah_price_lookup():
+    r = get_project_price("tengah-garden-avenue", "4-room")
+    assert r["price_low"] == 360000 and r["status"] == "indicative"
+
+
+def test_unknown_project_returns_error():
+    assert "error" in get_project_price("nowhere")

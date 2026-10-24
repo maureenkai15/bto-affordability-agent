@@ -1,0 +1,134 @@
+# Policy values used by every calculator.
+# RULE: no money/policy number is hard-coded in Python. Change it here, with a source and as-of date.
+# "verified: false" means the value is a reasonable placeholder that MUST be confirmed on hdb.gov.sg / iras.gov.sg
+# before you rely on it. The app surfaces these as warnings.
+
+meta:
+  policy_version: "2026.10"
+  as_of: "2026-10-24"
+  stale_after_days: 90
+  disclaimer: "Estimate only. Your HDB Flat Eligibility (HFE) letter is the official answer. Not financial advice."
+
+income_ceilings:
+  family:
+    value: 16000
+    effective_from: "2026-08-24"
+    note: "Raised from $14,000 at National Day Rally 2026, for HFE applications from 24 Aug 2026. Applies to new flats and HDB loans."
+    source_url: "https://propertynet.sg/ndr-2026-bto-income-ceiling-16000-ec-18000-extra-ballot-chances/"
+    verified: true
+  extended_family:
+    value: 24000
+    effective_from: "2026-08-24"
+    source_url: "https://divedeals.sg/blog/hdb-income-ceiling-singapore"
+    verified: true
+  single_35_plus:
+    value: 8000
+    effective_from: "2026-08-24"
+    note: "Raised from $7,000. Singles must be 35 or older."
+    source_url: "https://propertynet.sg/ndr-2026-bto-income-ceiling-16000-ec-18000-extra-ballot-chances/"
+    verified: true
+
+single_min_age:
+  value: 35
+  source_url: "https://www.hdb.gov.sg"
+  verified: true
+
+# Enhanced CPF Housing Grant (EHG). Tiers unchanged at NDR 2026.
+# Each band: max_income is the inclusive upper bound of average gross monthly household income.
+ehg:
+  family:
+    income_ceiling: 9000
+    effective_from: "2024-08-20"
+    source_url: "https://www.togetherforbetter.gov.sg/lifestage/youngadults/"
+    verified: true
+    bands:
+      - {max_income: 1500, grant: 120000}
+      - {max_income: 2000, grant: 110000}
+      - {max_income: 2500, grant: 105000}
+      - {max_income: 3000, grant: 95000}
+      - {max_income: 3500, grant: 90000}
+      - {max_income: 4000, grant: 80000}
+      - {max_income: 4500, grant: 70000}
+      - {max_income: 5000, grant: 65000}
+      - {max_income: 5500, grant: 55000}
+      - {max_income: 6000, grant: 50000}
+      - {max_income: 6500, grant: 40000}
+      - {max_income: 7000, grant: 30000}
+      - {max_income: 7500, grant: 25000}
+      - {max_income: 8000, grant: 20000}
+      - {max_income: 8500, grant: 10000}
+      - {max_income: 9000, grant: 5000}
+  single:
+    # Singles scheme mirrors the family table at half the income bands and half the grant.
+    # Max $60,000 and ceiling $4,500 are confirmed; the half-scale band structure is an ASSUMPTION to verify.
+    income_ceiling: 4500
+    max_grant: 60000
+    derive_from_family_at_half_scale: true
+    source_url: "https://propertynet.sg/enhanced-cpf-housing-grant-ehg-2026-income-tiers-payouts/"
+    verified: false
+
+hdb_loan:
+  interest_rate:
+    value: 0.026
+    note: "CPF OA rate (2.5%) + 0.1%."
+    source_url: "https://www.edgeprop.sg/property-news/guide-hdb-concessionary-housing-loan"
+    verified: true
+  ltv:
+    value: 0.75
+    effective_from: "2024-08-20"
+    note: "Lowered from 80%. Many blogs still say 80% - outdated."
+    source_url: "https://www.shopback.sg/blog/finance/hdb-vs-bank-loan"
+    verified: true
+  msr:
+    value: 0.30
+    note: "Mortgage Servicing Ratio: monthly instalment <= 30% of gross monthly household income."
+    source_url: "https://www.shopback.sg/blog/finance/hdb-vs-bank-loan"
+    verified: true
+  max_tenure_years:
+    value: 25
+    source_url: "https://www.smartcalculator.sg/housing/mortgage-calculator"
+    verified: true
+  tenure_age_limit:
+    value: 65
+    note: "SIMPLIFICATION: tenure capped so the oldest applicant finishes by 65. HDB's exact rule may differ - confirm."
+    verified: false
+
+upfront:
+  option_fee:
+    note: "BTO option fee by flat type."
+    source_url: "https://www.hdb.gov.sg"
+    verified: false
+    by_flat_type:
+      2-room: 500
+      3-room: 1000
+      4-room: 2000
+      5-room: 2000
+      3gen: 2000
+  buyer_stamp_duty:
+    note: "IRAS residential BSD tiers (marginal)."
+    source_url: "https://www.iras.gov.sg"
+    verified: false
+    tiers:
+      - {up_to: 180000, rate: 0.01}
+      - {up_to: 360000, rate: 0.02}
+      - {up_to: 1000000, rate: 0.03}
+      - {up_to: 1500000, rate: 0.04}
+      - {up_to: 3000000, rate: 0.05}
+      - {up_to: null, rate: 0.06}
+  legal_and_misc_estimate:
+    value: 3000
+    note: "Rough placeholder for conveyancing and misc fees. Users should replace with a quote."
+    verified: false
+
+# Indicative prices before grants. Final prices only at launch.
+projects:
+  tengah-garden-avenue:
+    name: "Tengah Garden Avenue (name TBC)"
+    town: "Tengah"
+    exercise: "November 2026 BTO (moved from October)"
+    classification: "Standard (expected)"
+    mop_years: 5
+    status: "indicative"
+    source_url: "https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/"
+    prices:
+      4-room: {low: 360000, high: 380000}
