@@ -12,6 +12,7 @@ from calculators import (
     get_project_price,
     list_projects,
     max_loan,
+    project_household,
     upfront_costs,
 )
 
@@ -139,15 +140,34 @@ TOOLS: list[dict[str, Any]] = [
                                                                "Ask the user; omit to use the market snapshot."},
                 "tenure_years": {"type": "integer", "description": "Shorter tenure than the maximum, if wanted."},
                 "desired_loan": {"type": "number", "description": "Borrow less than the maximum, if wanted."},
+                "other_monthly_debts": {"type": "number", "description": "Car, study or card instalments per month."},
+                "renovation_budget": {"type": "number", "description": "Renovation and furnishing budget (cash)."},
             },
             "required": ["household_type", "incomes", "ages", "cpf_oa_balances", "cash_savings", "flat_price"],
         },
     },
 ]
 
-_DISPATCH: dict[str, Callable[..., dict]] = {
+TOOLS.append({
+    "name": "project_household",
+    "description": "What if they apply later? Re-runs the full assessment now and for each of the next `years` years, "
+                   "growing CPF OA (official contribution rates), cash savings and, optionally, income and price.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "request": {"type": "object", "description": "The same arguments you would pass to assess_household."},
+            "years": {"type": "integer", "minimum": 1, "maximum": 10},
+            "income_growth": {"type": "number", "description": "Yearly income growth as a decimal, e.g. 0.03."},
+            "price_growth": {"type": "number", "description": "Yearly flat price growth as a decimal."},
+        },
+        "required": ["request", "years"],
+    },
+})
+
+_DISPATCH: dict[str, Callable[..., dict | list]] = {
     "get_project_price": get_project_price,
     "list_projects": list_projects,
+    "project_household": project_household,
     "check_eligibility": check_eligibility,
     "get_ehg_grant": get_ehg_grant,
     "max_loan": max_loan,

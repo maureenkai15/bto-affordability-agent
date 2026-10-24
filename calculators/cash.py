@@ -14,6 +14,7 @@ def cash_gap(
     cpf_buffer: float = 0.0,
     cash_buffer_target: float = 0.0,
     min_cash: float = 0.0,
+    renovation: float = 0.0,
 ) -> dict:
     """Waterfall: price - grants - loan = downpayment; CPF OA pays first, then cash; plus upfront costs.
 
@@ -21,12 +22,13 @@ def cash_gap(
     cash_buffer_target: emergency cash you should still have afterwards. If you can pay but end
     up below this, the verdict is "tight" rather than "affordable".
     min_cash: part of the downpayment that must be paid in cash (bank loans), so CPF cannot cover it.
+    renovation: renovation and furnishing budget, paid in cash (CPF cannot be used for it).
     """
     downpayment = max(0.0, flat_price - grants - loan)
     usable_oa = max(0.0, cpf_oa_total - cpf_buffer)
     from_cpf = min(max(0.0, downpayment - min_cash), usable_oa)
     cash_for_downpayment = downpayment - from_cpf
-    cash_needed = cash_for_downpayment + upfront_total
+    cash_needed = cash_for_downpayment + upfront_total + renovation
     gap = max(0.0, cash_needed - cash_savings)
     surplus = max(0.0, cash_savings - cash_needed)
 
@@ -43,6 +45,7 @@ def cash_gap(
         "from_cpf_oa": round(from_cpf, 2),
         "cash_for_downpayment": round(cash_for_downpayment, 2),
         "upfront_costs": round(upfront_total, 2),
+        "renovation": round(renovation, 2),
         "total_cash_needed": round(cash_needed, 2),
         "cash_savings": round(cash_savings, 2),
         "gap": round(gap, 2),

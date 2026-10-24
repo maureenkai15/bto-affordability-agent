@@ -88,6 +88,8 @@ def assess_household(
     bank_rate: float | None = None,
     tenure_years: int | None = None,
     desired_loan: float | None = None,
+    other_monthly_debts: float = 0.0,
+    renovation_budget: float = 0.0,
 ) -> dict:
     request = {k: v for k, v in locals().items()}  # the exact inputs, so callers can re-run a what-if
     income = float(sum(incomes))
@@ -104,7 +106,7 @@ def assess_household(
     if elig["eligible"]:
         loan = max_loan(flat_price, grants, income, average_age_at_loan, lender=lender, bank_rate=bank_rate,
                         income_weighted_age_at_loan=income_weighted_age_at_loan, tenure_years=tenure_years,
-                        desired_loan=desired_loan)
+                        desired_loan=desired_loan, other_monthly_debts=other_monthly_debts)
     else:
         loan = {"lender": lender, "loan": 0.0, "max_loan": 0.0, "binding_limit": "ineligible",
                 "binding_limit_label": "not eligible to buy a new flat", "ltv": 0.0, "min_cash_pct": 0.0,
@@ -122,6 +124,7 @@ def assess_household(
         upfront_total=upfront["total"],
         cash_buffer_target=cash_buffer,
         min_cash=flat_price * loan["min_cash_pct"],
+        renovation=renovation_budget,
     )
     if not elig["eligible"]:
         cash["verdict"] = "ineligible"
@@ -155,6 +158,10 @@ def assess_household(
             "CPF OA balances are used for the downpayment before cash.",
             f"You should keep {EMERGENCY_BUFFER_MONTHS} months of instalments as emergency cash.",
             "Upfront costs include the option fee, buyer's and mortgage stamp duty, the application fee and a legal estimate.",
+            *([f"Renovation and furnishing budget of ${renovation_budget:,.0f} is paid in cash."]
+              if renovation_budget else ["No renovation or furnishing budget included."]),
+            *(["Other monthly debts count towards the bank's 55% TDSR; HDB also weighs them in its credit "
+               "assessment, which this tool does not model."] if other_monthly_debts else []),
         ],
         "warnings": _warnings(ehg),
         "disclaimer": policy.value("meta", "disclaimer"),

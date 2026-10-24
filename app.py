@@ -1,4 +1,4 @@
-"""Streamlit UI: live calculator (free, no API key) and an optional chat mode, both feeding the same results.
+"""Streamlit UI: live calculator and agent demo (both free), plus optional chat with Claude when an API key is set.
 
 Run:  streamlit run app.py
 """
@@ -6,20 +6,16 @@ from __future__ import annotations
 
 import os
 
-import plotly.graph_objects as go
 import streamlit as st
 from dotenv import load_dotenv
 
 from agent import has_api_key, run_agent
-from calculators import (
-    assess_household,
-    get_ehg_grant,
-    get_project_price,
-    list_projects,
-    monthly_instalment,
-    policy,
-)
+from agent.demo import demo_turn
+from calculators import assess_household, get_project_price, list_projects, policy, project_household
 from calculators.assess import EMERGENCY_BUFFER_MONTHS
+from ui import charts
+from ui.explain import jargon, plain_summary
+from ui.theme import CLASS_COLOURS, CSS, FLAT_LABELS, VERDICTS, badge, md, money
 
 load_dotenv()  # local dev: reads ANTHROPIC_API_KEY from .env
 if "ANTHROPIC_API_KEY" not in os.environ:
@@ -30,27 +26,17 @@ if "ANTHROPIC_API_KEY" not in os.environ:
 
 st.set_page_config(page_title="BTO Affordability Agent", page_icon="🏠", layout="wide")
 
-FORM_MODE = "Calculator (free)"
-CHAT_MODE = "Chat with AI agent"
+FORM_MODE = "🧮 Calculator"
+DEMO_MODE = "🤖 Agent demo"
+CHAT_MODE = "💬 Chat with Claude"
 CUSTOM = "custom"
-
-# Chart colours: categorical slots from the dataviz reference palette; status colours are reserved for the verdict.
-BLUE, ORANGE, AQUA, MUTED = "#2a78d6", "#eb6834", "#1baf7a", "#898781"
-CLASS_COLOURS = {"Standard": BLUE, "Plus": ORANGE, "Prime": AQUA}
-VERDICTS = {
-    "affordable": ("✅", "Affordable", "#0a7d32", "#0ca30c", "#ffffff"),
-    "tight": ("⚠️", "Tight", "#c98500", "#fab219", "#0b0b0b"),
-    "gap": ("⛔", "Cash gap", "#a32626", "#d03b3b", "#ffffff"),
-    "ineligible": ("🚫", "Not eligible", "#5c5b57", "#898781", "#ffffff"),
-}
-FLAT_LABELS = {"2-room": "2-room Flexi", "3-room": "3-room", "4-room": "4-room", "5-room": "5-room", "3gen": "3Gen"}
 REGIONS = ["North", "North-East", "East", "West", "Central"]
 
 PROJECTS = {p["project_id"]: p for p in list_projects()}
 FLAT_TYPES = list(policy.node("upfront", "option_fee", "by_flat_type"))
 BANK_RATE_DEFAULT = policy.value("bank_loan", "indicative_rate")
 
-# Each example drives both modes: a chat prompt, and the same household as calculator values.
+# Each example drives every mode: a chat prompt, and the same household as calculator values.
 EXAMPLES = {
     "👫  Couple, 25 & 26 · $8k": {
         "prompt": (
@@ -86,69 +72,10 @@ BASE_FORM = dict(f_household="family", f_age1=28, f_inc1=0, f_oa1=0, f_age2=28, 
                  f_cash=0, f_monthly_savings=0, f_years=4, f_project="tengah-garden-avenue", f_flat_type="4-room",
                  f_price=360000, f_custom_price=300000, f_custom_type="4-room", f_citizens=True, f_first=True,
                  f_lender="hdb", f_bank_rate=round(BANK_RATE_DEFAULT * 100, 2), f_borrow_max=True,
-                 f_regions=REGIONS, f_status="All")
+                 f_debts=0, f_reno=0, f_regions=REGIONS, f_status="All",
+                 f_wait_years=3, f_income_growth=0.0, f_price_growth=0.0)
 FORM_DEFAULTS = BASE_FORM | next(iter(EXAMPLES.values()))["form"]  # open on a filled-in example, not zeros
 RESETTABLE = ("f_tenure", "f_borrow")  # depend on other inputs; recomputed when cleared
-
-CSS = """
-<style>
-@keyframes drift {0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%}}
-@keyframes pop {0% {transform: scale(.6); opacity: 0} 70% {transform: scale(1.12)} 100% {transform: scale(1); opacity: 1}}
-@keyframes rise {from {transform: translateY(8px); opacity: 0} to {transform: none; opacity: 1}}
-.hero {background: linear-gradient(120deg, #0d366b, #1c5cab, #2a78d6, #1baf7a, #1c5cab);
-       background-size: 300% 300%; animation: drift 18s ease infinite;
-       border-radius: 1.5rem; padding: 2.2rem 2.4rem 1.7rem; color: #fff; margin-bottom: 1.4rem;
-       box-shadow: 0 18px 40px rgba(13, 54, 107, .28); position: relative; overflow: hidden;}
-.hero::before {content: ""; position: absolute; width: 420px; height: 420px; right: -120px; top: -180px;
-       background: radial-gradient(circle, rgba(255,255,255,.22), transparent 65%); border-radius: 50%;}
-.hero::after {content: "🏠"; position: absolute; right: 2rem; bottom: .4rem; font-size: 7.5rem; opacity: .16;}
-.hero h1 {color: #fff; margin: 0 0 .4rem; font-size: 2.6rem; line-height: 1.08; padding: 0; letter-spacing: -.02em;}
-.hero p {color: rgba(255,255,255,.9); margin: 0 0 1.2rem; font-size: 1.08rem; max-width: 46rem;}
-.stats {display: flex; gap: 2.2rem; flex-wrap: wrap; margin-bottom: 1rem;}
-.stats div {line-height: 1.1;}
-.stats b {display: block; font-size: 1.9rem; font-weight: 800; color: #fff;}
-.stats span {font-size: .8rem; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.75);}
-.chip {display: inline-block; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3);
-       border-radius: 999px; padding: .22rem .8rem; margin: 0 .4rem .4rem 0; font-size: .8rem; color: #fff;
-       backdrop-filter: blur(6px);}
-.section {font-size: 1.45rem; font-weight: 800; margin: 1.2rem 0 .2rem; letter-spacing: -.01em;}
-.section small {display: block; font-size: .92rem; font-weight: 400; opacity: .65; margin-top: .15rem;}
-.verdict {border-radius: 1.2rem; padding: 1.3rem 1.5rem; margin-bottom: 1rem; animation: rise .45s ease;
-          box-shadow: 0 12px 30px rgba(0,0,0,.14); position: relative; overflow: hidden;}
-.verdict::after {content: ""; position: absolute; width: 260px; height: 260px; right: -80px; top: -120px;
-          background: radial-gradient(circle, rgba(255,255,255,.25), transparent 65%); border-radius: 50%;}
-.verdict .label {font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; opacity: .85;}
-.verdict .big {font-size: 2.2rem; font-weight: 800; line-height: 1.15; margin: .15rem 0 .35rem;}
-.verdict .big .icon {display: inline-block; animation: pop .5s ease;}
-.verdict .why {font-size: 1rem; opacity: .95;}
-.step {font-weight: 700; font-size: 1.05rem; margin: .1rem 0 .5rem;}
-.step span {display: inline-flex; align-items: center; justify-content: center; width: 1.7rem; height: 1.7rem;
-            border-radius: 999px; background: linear-gradient(135deg, #2a78d6, #1baf7a); color: #fff;
-            font-size: .85rem; margin-right: .55rem; box-shadow: 0 4px 10px rgba(42,120,214,.35);}
-.badge {display: inline-block; border-radius: 999px; padding: .15rem .65rem; font-size: .75rem; font-weight: 700;
-        margin: 0 .3rem .3rem 0; color: #fff;}
-.badge.soft {background: rgba(137,135,129,.18); color: inherit; font-weight: 600;}
-.pcard h3 {margin: .1rem 0 .1rem; padding: 0; font-size: 1.35rem;}
-.pcard .meta {opacity: .7; font-size: .9rem; margin-bottom: .5rem;}
-.basis {font-size: .82rem; opacity: .75; border-left: 3px solid #eb6834; padding-left: .6rem; margin: .4rem 0;}
-.timeline {display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin: .5rem 0 1rem;}
-.tl {border-radius: 1rem; padding: .9rem 1rem; background: rgba(42,120,214,.08); border: 1px solid rgba(42,120,214,.18);
-     position: relative; animation: rise .4s ease both;}
-.tl:nth-child(2) {animation-delay: .06s} .tl:nth-child(3) {animation-delay: .12s} .tl:nth-child(4) {animation-delay: .18s}
-.tl .n {font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; opacity: .65;}
-.tl .t {font-weight: 700; margin: .15rem 0 .3rem;}
-.tl .v {font-size: 1.35rem; font-weight: 800; color: #2a78d6;}
-.tl .d {font-size: .8rem; opacity: .75; margin-top: .25rem;}
-@media (max-width: 800px) {.hero h1 {font-size: 2rem;} .stats {gap: 1.2rem;}}
-[class*="st-key-card"] {border-radius: 1.2rem !important; transition: box-shadow .2s ease, transform .2s ease;
-       box-shadow: 0 2px 10px rgba(0,0,0,.04);}
-[class*="st-key-card"]:hover {box-shadow: 0 10px 28px rgba(42,120,214,.14); transform: translateY(-2px);}
-.legend {display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .8rem; opacity: .85; margin-top: -.3rem;}
-.legend i {display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: .35rem;
-           vertical-align: -1px;}
-.foot {opacity: .7; font-size: .85rem; text-align: center; margin-top: 2.4rem;}
-</style>
-"""
 
 # ---------- state ----------
 if "api_messages" not in st.session_state:
@@ -156,33 +83,33 @@ if "api_messages" not in st.session_state:
     st.session_state.chat = []              # what the user sees
     st.session_state.tool_log = []
     st.session_state.assessment = None
+    st.session_state.demo_chat = []         # (prompt, AgentTurn) pairs replayed in demo mode
 for k, v in FORM_DEFAULTS.items():
     st.session_state.setdefault(k, v)
+st.session_state.setdefault("f_exact", False)
 
 key_available = has_api_key()
 
 
-def _money(x: float) -> str:
-    return f"${x:,.0f}"
-
-
-def _md(text: str) -> str:
-    """Escape dollar signs: Streamlit markdown renders text between two $ as LaTeX."""
-    return text.replace("$", r"\$")
-
-
-def _class(p: dict) -> str:
-    return p["classification"].split(" ")[0]
-
-
-def _badge(text: str, colour: str | None = None) -> str:
-    return (f'<span class="badge" style="background:{colour}">{text}</span>' if colour
-            else f'<span class="badge soft">{text}</span>')
+def example_request(form: dict) -> tuple[dict, str | None, str]:
+    """An example's calculator values as assess_household arguments, plus its project and flat type."""
+    f = BASE_FORM | form
+    applicants = [1] if f["f_household"] == "single" else [1, 2]
+    request = dict(household_type=f["f_household"], incomes=[f[f"f_inc{i}"] for i in applicants],
+                   ages=[f[f"f_age{i}"] for i in applicants], cpf_oa_balances=[f[f"f_oa{i}"] for i in applicants],
+                   cash_savings=f["f_cash"], flat_price=f["f_custom_price"], flat_type=f["f_custom_type"],
+                   years_until_key_collection=f["f_years"], monthly_savings=f["f_monthly_savings"])
+    if f["f_project"] == CUSTOM:
+        return request, None, f["f_custom_type"]
+    return request, f["f_project"], f["f_flat_type"]
 
 
 def load_example(label: str) -> None:
-    if st.session_state.get("mode") == CHAT_MODE:
+    mode = st.session_state.get("mode")
+    if mode == CHAT_MODE:
         st.session_state.pending_prompt = EXAMPLES[label]["prompt"]
+    elif mode == DEMO_MODE:
+        st.session_state.pending_demo = label
     else:
         for k in RESETTABLE:
             st.session_state.pop(k, None)
@@ -190,7 +117,7 @@ def load_example(label: str) -> None:
 
 
 def start_over() -> None:
-    for k in ("api_messages", "chat", "tool_log", "assessment", *FORM_DEFAULTS, *RESETTABLE):
+    for k in ("api_messages", "chat", "tool_log", "assessment", "demo_chat", *FORM_DEFAULTS, *RESETTABLE):
         st.session_state.pop(k, None)
 
 
@@ -215,30 +142,49 @@ def on_lender_change() -> None:
         st.session_state.pop(k, None)
 
 
+def _keep(key: str, low: float, high: float, default: float) -> None:
+    """Re-assert a slider's value before drawing it. A slider whose range changes is a new widget to Streamlit and
+    would otherwise reset to its minimum; out-of-range or missing values fall back to the default."""
+    value = st.session_state.get(key)
+    st.session_state[key] = value if value is not None and low <= value <= high else default
+
+
+def amount(label: str, key: str, high: int, step: int, help: str | None = None, target=st) -> None:
+    """A money input: a slider, or a box to type an exact amount when 'Type exact numbers' is on."""
+    _keep(key, 0, high, 0)  # swapping slider <-> box makes a new widget; keep the value across the swap
+    if st.session_state.f_exact:
+        target.number_input(label, 0, high, step=step, key=key, help=help)
+    else:
+        target.slider(label, 0, high, step=step, format="$%d", key=key, help=help)
+
+
 # ---------- sidebar ----------
 with st.sidebar:
     st.markdown("### ⚙️ Mode")
-    mode = st.radio("Mode", [FORM_MODE, CHAT_MODE], index=0, disabled=not key_available, key="mode",
-                    label_visibility="collapsed")
+    modes = [FORM_MODE, DEMO_MODE] + ([CHAT_MODE] if key_available else [])
+    mode = st.radio("Mode", modes, key="mode", label_visibility="collapsed",
+                    captions=["Live sliders, free", "Watch the agent's tool calls, free"]
+                    + (["Free-text questions (uses your API key)"] if key_available else []))
     if not key_available:
-        st.caption("💡 Chat mode needs an Anthropic API key (paid). The calculator runs the same tested "
-                   "maths for free.")
+        st.caption("💡 Free-text chat with Claude appears here when an Anthropic API key is set (paid). "
+                   "Both modes above are free.")
+    st.toggle("✏️ Type exact numbers", key="f_exact", help="Swap the money sliders for boxes you can type into.")
     st.divider()
     st.markdown("### 📜 Policy snapshot")
     st.caption(f"As of **{policy.as_of()}**")
-    st.markdown(_md(
-        f"- Income ceiling (families): **{_money(policy.value('income_ceilings', 'family'))}**/month\n"
-        f"- EHG grant: up to **{_money(policy.node('ehg', 'family')['bands'][0]['grant'])}**\n"
+    st.markdown(md(
+        f"- Income ceiling (families): **{money(policy.value('income_ceilings', 'family'))}**/month\n"
+        f"- EHG grant: up to **{money(policy.node('ehg', 'family')['bands'][0]['grant'])}**\n"
         f"- HDB loan: **{policy.value('hdb_loan', 'interest_rate'):.1%}** · "
         f"LTV **{policy.value('hdb_loan', 'ltv'):.0%}** · MSR **{policy.value('hdb_loan', 'msr'):.0%}**\n"
-        f"- Bank loan: LTV **{policy.value('bank_loan', 'ltv'):.0%}**, stress-tested at "
+        f"- Bank loan: LTV **{policy.value('bank_loan', 'ltv'):.0%}**, TDSR "
+        f"**{policy.value('bank_loan', 'tdsr'):.0%}**, stress test "
         f"**{policy.value('bank_loan', 'assessment_rate_floor'):.0%}**"
     ))
     if policy.is_stale():
         st.warning("Policy values may be out of date. Check hdb.gov.sg.")
 
 st.html(CSS)
-verified = [i for i in policy.sourced_items() if i["verified"] and not i["rule"].startswith("projects.")]
 rules = [i for i in policy.sourced_items() if not i["rule"].startswith("projects.")]
 st.markdown(
     f"""<div class="hero">
@@ -249,7 +195,7 @@ st.markdown(
         <div><b>{len(PROJECTS)}</b><span>BTO projects</span></div>
         <div><b>{len({p['town'] for p in PROJECTS.values()})}</b><span>towns</span></div>
         <div><b>2</b><span>loan types</span></div>
-        <div><b>{len(verified)}/{len(rules)}</b><span>rules verified</span></div>
+        <div><b>{sum(i['verified'] for i in rules)}/{len(rules)}</b><span>rules verified</span></div>
       </div>
       <span class="chip">📅 Policy as of {policy.as_of()}</span>
       <span class="chip">🧮 Every number from tested Python, not AI</span>
@@ -258,191 +204,6 @@ st.markdown(
     </div>""",
     unsafe_allow_html=True,
 )
-
-
-# ---------- charts ----------
-def _style(fig: go.Figure, height: int) -> go.Figure:
-    fig.update_layout(height=height, margin=dict(t=30, b=10, l=10, r=10), showlegend=False,
-                      paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                      font=dict(family="Inter, sans-serif", size=13), hoverlabel=dict(font_size=13))
-    fig.update_yaxes(gridcolor="rgba(137,135,129,.25)", zeroline=False)
-    fig.update_xaxes(showgrid=False)
-    return fig
-
-
-def project_map(visible: list[dict], selected: str) -> go.Figure:
-    fig = go.Figure()
-    for cls, colour in CLASS_COLOURS.items():
-        for status, opacity in (("launched", 0.95), ("upcoming", 0.55)):
-            pts = [p for p in visible if _class(p) == cls and p["status"] == status]
-            if not pts:
-                continue
-            fig.add_trace(go.Scattermap(
-                lat=[p["location"]["lat"] for p in pts], lon=[p["location"]["lon"] for p in pts],
-                mode="markers", name=f"{cls} · {'upcoming' if status == 'upcoming' else 'launched'}",
-                marker=dict(size=[11 + p["units"] / 160 for p in pts], color=colour, opacity=opacity),
-                customdata=[[p["name"], p["town"], p["classification"], p["exercise"], f"{p['units']:,}"]
-                            for p in pts],
-                hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]} · %{customdata[2]}<br>"
-                              "%{customdata[3]} · %{customdata[4]} flats<extra></extra>",
-            ))
-    if selected in PROJECTS:
-        p = PROJECTS[selected]
-        fig.add_trace(go.Scattermap(lat=[p["location"]["lat"]], lon=[p["location"]["lon"]], mode="markers+text",
-                                    marker=dict(size=34, color="rgba(235,104,52,.28)"), text=[f"  {p['name']}"],
-                                    textposition="middle right", textfont=dict(size=13, color="#eb6834"),
-                                    hoverinfo="skip", showlegend=False))
-    dark = getattr(getattr(st.context, "theme", None), "type", None) == "dark"
-    fig.update_layout(map=dict(style="carto-darkmatter" if dark else "carto-positron",
-                               center=dict(lat=1.352, lon=103.835), zoom=10.15),
-                      height=430, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor="rgba(0,0,0,0)",
-                      showlegend=False)
-    return fig
-
-
-def map_legend() -> str:
-    dots = "".join(f'<span><i style="background:{c}"></i>{name}</span>' for name, c in CLASS_COLOURS.items())
-    return (f'<div class="legend">{dots}<span><i style="background:{MUTED};opacity:.45"></i>faded = upcoming</span>'
-            f'<span>◯ size = number of flats · locations approximate</span></div>')
-
-
-def price_dumbbell(pid: str, flat_type: str, price: float) -> go.Figure:
-    p = PROJECTS[pid]
-    rows = [(FLAT_LABELS.get(t, t), get_project_price(pid, t)) for t in p["flat_types"]]
-    fig = go.Figure()
-    for label, r in rows:
-        fig.add_trace(go.Scatter(x=[r["price_low"], r["price_high"]], y=[label, label], mode="lines+markers",
-                                 line=dict(color=BLUE, width=6), marker=dict(size=10, color=BLUE),
-                                 hovertemplate=f"{label}: %{{x:$,.0f}}<extra></extra>"))
-    fig.add_trace(go.Scatter(x=[price], y=[FLAT_LABELS.get(flat_type, flat_type)], mode="markers",
-                             marker=dict(size=16, color=ORANGE, symbol="diamond", line=dict(color="#fff", width=2)),
-                             hovertemplate="Your price: %{x:$,.0f}<extra></extra>"))
-    fig.update_xaxes(tickprefix="$", tickformat="~s", showgrid=True, gridcolor="rgba(137,135,129,.2)")
-    return _style(fig, 60 + 42 * len(rows))
-
-
-def waterfall_chart(a: dict) -> go.Figure:
-    cash, price, grant, loan = a["cash"], a["inputs"]["flat_price"], a["grant"]["grant"], a["loan"]["loan"]
-    labels = ["Flat price", "Grant", "Loan", "CPF OA", "Cash for<br>downpayment", "Upfront<br>costs",
-              "Total cash<br>needed"]
-    fig = go.Figure(go.Waterfall(
-        orientation="v",
-        measure=["absolute", "relative", "relative", "relative", "total", "relative", "total"],
-        x=labels,
-        y=[price, -grant, -loan, -cash["from_cpf_oa"], 0, cash["upfront_costs"], 0],
-        text=[_money(price), f"−{_money(grant)}", f"−{_money(loan)}", f"−{_money(cash['from_cpf_oa'])}",
-              _money(cash["cash_for_downpayment"]), f"+{_money(cash['upfront_costs'])}",
-              _money(cash["total_cash_needed"])],
-        textposition="outside",
-        hovertemplate="%{x}: %{text}<extra></extra>",
-        decreasing={"marker": {"color": AQUA}},
-        increasing={"marker": {"color": ORANGE}},
-        totals={"marker": {"color": BLUE}},
-        connector={"line": {"width": 1, "color": MUTED, "dash": "dot"}},
-    ))
-    fig.update_yaxes(tickprefix="$", tickformat="~s", title=None)
-    return _style(fig, 380)
-
-
-def msr_gauge(a: dict) -> go.Figure:
-    msr_pct = policy.value("hdb_loan", "msr") * 100
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=a["loan"]["msr_used_pct"] or 0,
-        number={"suffix": "%", "font": {"size": 42}},
-        title={"text": "of income on the loan", "font": {"size": 14}},
-        gauge={
-            "axis": {"range": [0, msr_pct + 10], "ticksuffix": "%"},
-            "bar": {"color": BLUE, "thickness": 0.35},
-            "steps": [{"range": [0, msr_pct], "color": "rgba(42,120,214,.12)"},
-                      {"range": [msr_pct, msr_pct + 10], "color": "rgba(208,59,59,.12)"}],
-            "threshold": {"line": {"color": "#d03b3b", "width": 3}, "thickness": 0.9, "value": msr_pct},
-        },
-    ))
-    return _style(fig, 240)
-
-
-def rate_curve(a: dict) -> go.Figure:
-    """Monthly instalment on this loan across interest rates, with the HDB, bank and stress-test rates marked."""
-    loan, tenure = a["loan"]["loan"], a["loan"]["tenure_years"]
-    rates = [x / 1000 for x in range(10, 61, 1)]  # 1.0% to 6.0%
-    fig = go.Figure(go.Scatter(x=[r * 100 for r in rates], y=[monthly_instalment(loan, r, tenure) for r in rates],
-                               mode="lines", line=dict(color=BLUE, width=2.5),
-                               hovertemplate="At %{x:.1f}%: %{y:$,.0f}/month<extra></extra>"))
-    marks = [("HDB", policy.value("hdb_loan", "interest_rate"), BLUE),
-             ("Your bank rate", st.session_state.get("f_bank_rate", BANK_RATE_DEFAULT * 100) / 100, ORANGE),
-             ("MAS stress test", policy.value("bank_loan", "assessment_rate_floor"), MUTED)]
-    for name, r, colour in marks:
-        y = monthly_instalment(loan, r, tenure)
-        fig.add_trace(go.Scatter(x=[r * 100], y=[y], mode="markers+text", text=[f"{name}<br>{_money(y)}"],
-                                 textposition="bottom right" if name == "Your bank rate" else "top left",
-                                 marker=dict(size=11, color=colour, line=dict(color="#fff", width=2)),
-                                 hovertemplate=f"{name} %{{x:.2f}}%: %{{y:$,.0f}}/month<extra></extra>"))
-    cap = a["loan"].get("msr_max_instalment")
-    if cap:
-        fig.add_hline(y=cap, line_dash="dot", line_color="#d03b3b",
-                      annotation_text=f"{policy.value('hdb_loan', 'msr'):.0%} of income = {_money(cap)}",
-                      annotation_position="top left")
-    ys = [monthly_instalment(loan, r, tenure) for r in rates] + [cap or 0]
-    fig.update_xaxes(title="Interest rate (% a year)", ticksuffix="%")
-    fig.update_yaxes(title=None, tickprefix="$", tickformat=",", range=[min(ys) * 0.75, max(ys) * 1.08])
-    return _style(fig, 340)
-
-
-def grant_ladder(a: dict) -> go.Figure:
-    household = a["inputs"]["household_type"]
-    ceiling = policy.node("ehg", household)["income_ceiling"]
-    step = 50
-    incomes = list(range(0, int(ceiling * 1.25) + step, step))
-    grants = [get_ehg_grant(household, x)["grant"] for x in incomes]
-    you_income, you_grant = a["inputs"]["monthly_household_income"], a["grant"]["grant"]
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=incomes, y=grants, mode="lines", line=dict(color=BLUE, width=2, shape="hv"),
-                             fill="tozeroy", fillcolor="rgba(42,120,214,.10)",
-                             hovertemplate="Income $%{x:,}/month → grant $%{y:,}<extra></extra>"))
-    fig.add_trace(go.Scatter(x=[min(you_income, incomes[-1])], y=[you_grant], mode="markers+text",
-                             marker=dict(size=14, color=ORANGE, line=dict(color="#ffffff", width=2)),
-                             text=[f"You: {_money(you_grant)}"], textposition="top right",
-                             hovertemplate="Your income $%{x:,} → grant $%{y:,}<extra></extra>"))
-    fig.add_vline(x=ceiling, line_dash="dot", line_color=MUTED,
-                  annotation_text=f"EHG ceiling {_money(ceiling)}", annotation_position="top left")
-    fig.update_xaxes(title="Average gross monthly household income", tickprefix="$", tickformat=",")
-    fig.update_yaxes(title=None, tickprefix="$", tickformat="~s")
-    return _style(fig, 320)
-
-
-def upfront_chart(a: dict) -> go.Figure:
-    u = a["upfront"]
-    verified_rules = {i["rule"]: i["verified"] for i in policy.sourced_items()}
-    rows = [("Option fee", u["option_fee"], "upfront.option_fee"),
-            ("Buyer's stamp duty", u["buyer_stamp_duty"], "upfront.buyer_stamp_duty"),
-            ("Mortgage stamp duty", u["mortgage_stamp_duty"], "upfront.mortgage_stamp_duty"),
-            ("Application fee", u["application_fee"], "upfront.application_fee"),
-            ("Legal & misc (estimate)", u["legal_and_misc_estimate"], "upfront.legal_and_misc_estimate")]
-    rows.sort(key=lambda r: r[1])
-    fig = go.Figure(go.Bar(
-        x=[r[1] for r in rows],
-        y=[r[0] + ("" if verified_rules.get(r[2]) else "  ⚠️") for r in rows],
-        orientation="h",
-        marker=dict(color=[ORANGE if verified_rules.get(r[2]) else "rgba(235,104,52,.30)" for r in rows],
-                    pattern=dict(shape=["" if verified_rules.get(r[2]) else "/" for r in rows],
-                                 fgcolor=ORANGE, solidity=0.4)),
-        text=[_money(r[1]) for r in rows], textposition="outside", cliponaxis=False,
-        hovertemplate="%{y}: %{text}<extra></extra>",
-    ))
-    fig.update_xaxes(visible=False, range=[0, max(r[1] for r in rows) * 1.2])
-    return _style(fig, 240)
-
-
-def interest_bars(hdb: dict, bank: dict) -> go.Figure:
-    names = [f"HDB loan<br>{hdb['loan']['interest_rate']:.2%}", f"Bank loan<br>{bank['loan']['interest_rate']:.2%}"]
-    vals = [hdb["loan"]["total_interest"], bank["loan"]["total_interest"]]
-    fig = go.Figure(go.Bar(x=names, y=vals, marker=dict(color=[BLUE, ORANGE]), width=0.45,
-                           text=[_money(v) for v in vals], textposition="outside", cliponaxis=False,
-                           hovertemplate="%{x}: %{text} total interest<extra></extra>"))
-    fig.update_yaxes(visible=False, range=[0, max(vals + [1]) * 1.25])
-    fig.update_layout(title=dict(text="Total interest over the loan", font=dict(size=14)))
-    return _style(fig, 270)
 
 
 # ---------- explore projects ----------
@@ -462,9 +223,10 @@ def render_explorer() -> None:
 
     m, card = st.columns([3, 2], gap="large")
     with m, st.container(border=True, key="card-map"):
-        st.plotly_chart(project_map(visible, selected), width="stretch", config={"displayModeBar": False,
-                                                                                 "scrollZoom": False})
-        st.markdown(map_legend(), unsafe_allow_html=True)
+        dark = getattr(getattr(st.context, "theme", None), "type", None) == "dark"
+        st.plotly_chart(charts.project_map(visible, PROJECTS.get(selected), dark), width="stretch",
+                        config={**charts.NO_BAR, "scrollZoom": False})
+        st.markdown(charts.map_legend(), unsafe_allow_html=True)
     with card, st.container(border=True, key="card-project"):
         options = [CUSTOM] + sorted((p["project_id"] for p in visible),
                                     key=lambda i: (PROJECTS[i]["status"] != "upcoming", PROJECTS[i]["town"]))
@@ -475,20 +237,20 @@ def render_explorer() -> None:
                      f"{'🆕' if PROJECTS[i]['status'] == 'upcoming' else '🏗️'}  {PROJECTS[i]['name']} · "
                      f"{PROJECTS[i]['town']}")
         if selected == CUSTOM:
-            st.markdown("**Enter any price** below the map, in step ③.")
+            st.markdown("**Enter any price** in step ③ below.")
             return
         p = PROJECTS[selected]
-        cls = _class(p)
-        badges = _badge(p["classification"], CLASS_COLOURS[cls]) + _badge(p["exercise"]) + \
-            _badge("Upcoming · prices at launch" if p["status"] == "upcoming" else "Launched")
+        badges = badge(p["classification"], CLASS_COLOURS[p["classification"].split(" ")[0]]) + \
+            badge(p["exercise"]) + badge("Upcoming · prices at launch" if p["status"] == "upcoming" else "Launched")
         wait = f" · ~{p['waiting_time_months']} months to keys" if p.get("waiting_time_months") else ""
         st.markdown(f'<div class="pcard"><h3>{p["name"]}</h3><div class="meta">{p["town"]} · {p["region"]} · '
                     f'{p["units"]:,} flats{wait}</div>{badges}</div>', unsafe_allow_html=True)
         r = get_project_price(selected, st.session_state.f_flat_type)
         if "error" not in r and p["status"] == "upcoming":
-            st.markdown(f'<div class="basis">Prices: {r["price_basis"]}.</div>', unsafe_allow_html=True)
-        st.plotly_chart(price_dumbbell(selected, st.session_state.f_flat_type, st.session_state.f_price),
-                        width="stretch", config={"displayModeBar": False})
+            st.markdown(f'<div class="basis">⚠️ Not HDB prices. {r["price_basis"].capitalize()}.</div>',
+                        unsafe_allow_html=True)
+        st.plotly_chart(charts.price_dumbbell(p, st.session_state.f_flat_type, st.session_state.f_price),
+                        width="stretch", config=charts.NO_BAR)
         st.caption("Indicative price ranges before grants. ◆ = the price you're testing.")
 
 
@@ -500,47 +262,108 @@ def verdict_reason(a: dict) -> str:
     if verdict == "gap":
         months = a.get("months_to_close_gap")
         extra = f" At your saving rate that's about {months} months." if months else ""
-        return f"You'd be {_money(cash['gap'])} short in cash.{extra}"
+        return f"You'd be {money(cash['gap'])} short in cash.{extra}"
     if verdict == "tight":
-        return (f"You can pay, but you'd keep only {_money(cash['cash_left_after'])} in cash, below "
-                f"{EMERGENCY_BUFFER_MONTHS} months of instalments ({_money(cash['cash_buffer_target'])}).")
-    return (f"You'd still have {_money(cash['cash_left_after'])} in cash after buying, above "
-            f"{EMERGENCY_BUFFER_MONTHS} months of instalments ({_money(cash['cash_buffer_target'])}).")
+        return (f"You can pay, but you'd keep only {money(cash['cash_left_after'])} in cash, below "
+                f"{EMERGENCY_BUFFER_MONTHS} months of instalments ({money(cash['cash_buffer_target'])}).")
+    return (f"You'd still have {money(cash['cash_left_after'])} in cash after buying, above "
+            f"{EMERGENCY_BUFFER_MONTHS} months of instalments ({money(cash['cash_buffer_target'])}).")
 
 
 def render_timeline(a: dict) -> None:
     s, loan = a["stages"], a["loan"]
     steps = [
-        ("1 · Booking", "Option fee", _money(s["booking_option_fee"]), "Paid when you pick your flat."),
-        ("2 · Signing", f"Downpayment {s['signing_pct']:.0%}", _money(s["signing_downpayment"]),
+        ("1 · Booking", "Option fee", money(s["booking_option_fee"]), "Paid when you pick your flat."),
+        ("2 · Signing", f"Downpayment {s['signing_pct']:.0%}", money(s["signing_downpayment"]),
          "At the Agreement for Lease, by CPF and/or cash. Includes the option fee. Stamp duty and legal fees "
          "are also due around now."),
-        ("3 · Keys", "Loan disbursed", _money(loan["loan"]),
+        ("3 · Keys", "Loan disbursed", money(loan["loan"]),
          "The loan is disbursed and the rest of the downpayment (after grants) is paid."),
-        ("4 · Every month", "Instalment", _money(loan["monthly_instalment"]),
+        ("4 · Every month", "Instalment", money(loan["monthly_instalment"]),
          f"For {loan['tenure_years']} years, by CPF OA and/or cash."),
     ]
     html = "".join(f'<div class="tl"><div class="n">{n}</div><div class="t">{t}</div><div class="v">{v}</div>'
                    f'<div class="d">{d}</div></div>' for n, t, v, d in steps)
     st.markdown(f'<div class="timeline">{html}</div>', unsafe_allow_html=True)
     deferred = policy.node("payment_stages", "downpayment_at_signing")["deferred_income_assessment"]
-    st.caption(_md(f"Young couples on deferred income assessment pay {deferred:.1%} at signing instead. "
-                   f"At signing you'd have {_money(a['inputs']['cpf_oa_total'])} CPF OA and "
-                   f"{_money(a['inputs']['cash_savings'])} cash available."))
+    st.caption(md(f"Young couples on deferred income assessment pay {deferred:.1%} at signing instead. "
+                  f"At signing you'd have {money(a['inputs']['cpf_oa_total'])} CPF OA and "
+                  f"{money(a['inputs']['cash_savings'])} cash available."))
+
+
+def render_comparison(a: dict) -> None:
+    if a["cash"]["verdict"] == "ineligible":
+        st.info("This household isn't eligible to buy a new flat, so neither loan applies.")
+        return
+    req = {**a["request"], "tenure_years": None, "desired_loan": None}
+    bank_rate = a["request"].get("bank_rate") or st.session_state.f_bank_rate / 100
+    hdb = assess_household(**{**req, "lender": "hdb"})
+    bank = assess_household(**{**req, "lender": "bank", "bank_rate": bank_rate})
+    rows = [
+        ("Interest rate", lambda x: f"{x['loan']['interest_rate']:.2%}"),
+        ("Rate type", lambda x: "Pegged to CPF OA + 0.1%" if x["loan"]["lender"] == "hdb" else "Market, can change"),
+        ("Max loan (LTV)", lambda x: f"{money(x['loan']['loan'])} ({x['loan']['ltv']:.0%})"),
+        ("Limited by", lambda x: x["loan"]["binding_limit_label"]),
+        ("Tenure", lambda x: f"{x['loan']['tenure_years']} years"),
+        ("Monthly instalment", lambda x: money(x["loan"]["monthly_instalment"])),
+        ("Total interest", lambda x: money(x["loan"]["total_interest"])),
+        ("Downpayment at signing", lambda x: f"{x['stages']['signing_pct']:.0%} · "
+                                             f"{money(x['stages']['signing_downpayment'])}"),
+        ("Must be paid in cash", lambda x: f"{x['loan']['min_cash_pct']:.0%} of price"),
+        ("Cash needed in total", lambda x: money(x["cash"]["total_cash_needed"])),
+        ("Verdict", lambda x: f"{VERDICTS[x['cash']['verdict']][0]} {VERDICTS[x['cash']['verdict']][1]}"),
+    ]
+    st.dataframe([{"": name, "🏛️ HDB loan": f(hdb), "🏦 Bank loan": f(bank)} for name, f in rows],
+                 hide_index=True, width="stretch")
+    st.plotly_chart(charts.interest_bars(hdb, bank), width="stretch", config=charts.NO_BAR)
+    st.caption("Each loan at its longest standard tenure and largest amount. Bank rates are a market snapshot "
+               "unless you enter your own quote in step ④; they usually change after a lock-in period. "
+               "This is a comparison, not a recommendation.")
+
+
+def render_wait(a: dict) -> None:
+    st.markdown("**What if you apply later?** Your CPF OA grows with contributions (official 2026 rates) and "
+                "interest, and your cash grows with your monthly savings.")
+    w1, w2, w3 = st.columns(3)
+    w1.slider("Years from now", 1, 8, key="f_wait_years")
+    w2.slider("Pay rise a year (your guess)", 0.0, 8.0, step=0.5, format="%.1f%%", key="f_income_growth")
+    w3.slider("Price rise a year (your guess)", 0.0, 8.0, step=0.5, format="%.1f%%", key="f_price_growth")
+    rows = project_household(a["request"], st.session_state.f_wait_years,
+                             income_growth=st.session_state.f_income_growth / 100,
+                             price_growth=st.session_state.f_price_growth / 100)
+    first = next((r for r in rows if r["verdict"] == "affordable"), None)
+    if first is None:
+        st.warning(f"Not affordable in any of the next {st.session_state.f_wait_years} years on these assumptions.")
+    elif first["years_from_now"] == 0:
+        st.success("Affordable now. The chart shows how your buffer changes if you wait.")
+    else:
+        st.success(md(f"Affordable in about {first['years_from_now']} year(s), with "
+                      f"{money(first['cash_left_after'])} cash left."))
+    lost = [r for r in rows[1:] if r["grant"] < rows[0]["grant"]]
+    if lost:
+        st.info(md(f"Heads up: with the pay rise, your grant falls from {money(rows[0]['grant'])} to "
+                   f"{money(lost[-1]['grant'])}. Higher income means a smaller EHG."))
+    st.plotly_chart(charts.projection_chart(rows), width="stretch", config=charts.NO_BAR)
+    st.dataframe([{"When": "Now" if r["years_from_now"] == 0 else f"In {r['years_from_now']} yr",
+                   "Income": money(r["monthly_household_income"]), "CPF OA": money(r["cpf_oa_total"]),
+                   "Cash": money(r["cash_savings"]), "Price": money(r["flat_price"]), "Grant": money(r["grant"]),
+                   "Verdict": f"{VERDICTS[r['verdict']][0]} {VERDICTS[r['verdict']][1]}"} for r in rows],
+                 hide_index=True, width="stretch")
+    st.caption("Simplified: yearly steps, monthly wages only (no bonuses), base OA interest only. "
+               "The waiting time for keys after you apply stays the same.")
 
 
 def render_results(a: dict | None) -> None:
     with right:
         if not a:
-            st.info("👋 Tell the agent about your household, or pick an example above. "
-                    "Your numbers appear here.")
+            st.info("👋 Pick an example above to see the agent at work. Your numbers appear here.")
             return
 
         icon, label, c1, c2, ink = VERDICTS[a["cash"]["verdict"]]
         lender = "bank loan" if a["loan"].get("lender") == "bank" else "HDB loan"
         st.markdown(
             f"""<div class="verdict" style="background: linear-gradient(120deg, {c1}, {c2}); color: {ink};">
-                  <div class="label">Verdict · {_money(a['inputs']['flat_price'])}
+                  <div class="label">Verdict · {money(a['inputs']['flat_price'])}
                     {FLAT_LABELS.get(a['inputs']['flat_type'], a['inputs']['flat_type'])} · {lender}</div>
                   <div class="big"><span class="icon">{icon}</span> {label}</div>
                   <div class="why">{verdict_reason(a)}</div>
@@ -551,39 +374,48 @@ def render_results(a: dict | None) -> None:
         cash, loan = a["cash"], a["loan"]
         row1, row2 = st.columns(2), st.columns(2)
         m1, m2, m3, m4 = *row1, *row2
-        m1.metric("Grant (EHG)", _money(a["grant"]["grant"]), border=True, help=_md(a["grant"]["explanation"]))
-        m2.metric(f"{'Bank' if loan.get('lender') == 'bank' else 'HDB'} loan", _money(loan["loan"]), border=True,
+        m1.metric("Grant (EHG)", money(a["grant"]["grant"]), border=True, help=md(a["grant"]["explanation"]))
+        m2.metric(f"{'Bank' if loan.get('lender') == 'bank' else 'HDB'} loan", money(loan["loan"]), border=True,
                   help=f"Limited by the {loan['binding_limit_label']}.")
-        m3.metric("Monthly instalment", _money(loan["monthly_instalment"]), border=True,
+        m3.metric("Monthly instalment", money(loan["monthly_instalment"]), border=True,
                   delta=f"{loan['msr_used_pct']:.1f}% of income" if loan["msr_used_pct"] is not None else None,
                   delta_color="off", delta_arrow="off",
                   help=f"{loan['tenure_years']}-year tenure at {loan['interest_rate']:.2%}.")
         if cash["gap"] > 0:
-            m4.metric("Cash gap", _money(cash["gap"]), border=True, delta="short of the cash needed",
+            m4.metric("Cash gap", money(cash["gap"]), border=True, delta="short of the cash needed",
                       delta_color="red", delta_arrow="off")
         else:
-            m4.metric("Cash left after buying", _money(cash["cash_left_after"]), border=True)
+            m4.metric("Cash left after buying", money(cash["cash_left_after"]), border=True)
 
-        tabs = st.tabs(["💸 Money", "📈 Rates", "🏦 HDB vs bank", "🗓️ Payments", "🎁 Grants", "📋 Sources"])
+        with st.container(key="plain"):
+            st.markdown("**💬 In plain English**")
+            st.markdown("\n".join(f"- {md(x)}" for x in plain_summary(a)))
+
+        tabs = st.tabs(["💸 Money", "📈 Rates", "🏦 HDB vs bank", "🗓️ Payments", "⏳ Wait?", "📋 Sources"])
         with tabs[0]:
-            st.plotly_chart(waterfall_chart(a), width="stretch", config={"displayModeBar": False})
+            st.plotly_chart(charts.waterfall_chart(a), width="stretch", config=charts.NO_BAR)
             st.caption(f"Flat price minus the grant and loan is the downpayment. CPF OA pays first, then cash. "
                        f"Loan limited by: **{loan['binding_limit_label']}**.")
+            st.markdown("**🎁 Where your grant comes from**")
+            st.plotly_chart(charts.grant_ladder(a), width="stretch", config=charts.NO_BAR)
+            st.caption(md(f"{a['grant']['explanation']} Lower incomes get bigger grants; "
+                          "above the ceiling it's $0."))
         with tabs[1]:
             if loan["msr_used_pct"] is None:
                 st.info("No loan: this household isn't eligible.")
             else:
-                g, k = st.columns([1, 1])
+                g, k = st.columns(2)
                 with g:
-                    st.plotly_chart(msr_gauge(a), width="stretch", config={"displayModeBar": False})
+                    st.plotly_chart(charts.msr_gauge(a), width="stretch", config=charts.NO_BAR)
                 with k:
-                    st.metric("Total interest over the loan", _money(loan["total_interest"]))
+                    st.metric("Total interest over the loan", money(loan["total_interest"]))
                     st.metric("Tenure", f"{loan['tenure_years']} years")
                     st.metric("Loan sized at", f"{loan['assessment_rate']:.1%}",
                               help="Lenders size the loan at a stress-test rate, so the real instalment lands "
                                    f"under the {policy.value('hdb_loan', 'msr'):.0%} cap.")
                 st.markdown("**What if the interest rate changes?**")
-                st.plotly_chart(rate_curve(a), width="stretch", config={"displayModeBar": False})
+                st.plotly_chart(charts.rate_curve(a, st.session_state.f_bank_rate / 100), width="stretch",
+                                config=charts.NO_BAR)
                 st.caption("Same loan and tenure at different rates. Bank rates float; the HDB rate is pegged to "
                            "the CPF OA rate + 0.1% and reviewed quarterly.")
         with tabs[2]:
@@ -591,60 +423,28 @@ def render_results(a: dict | None) -> None:
         with tabs[3]:
             render_timeline(a)
             st.markdown("**One-off costs**")
-            st.plotly_chart(upfront_chart(a), width="stretch", config={"displayModeBar": False})
-            st.caption(_md(f"Total upfront: **{_money(a['upfront']['total'])}**. "
-                           "⚠️ Faded, striped bars are placeholders still being verified."))
+            st.plotly_chart(charts.upfront_chart(a), width="stretch", config=charts.NO_BAR)
+            st.caption(md(f"Total upfront: **{money(a['upfront']['total'])}**. "
+                          "⚠️ Faded, striped bars are placeholders still being verified."))
         with tabs[4]:
-            st.plotly_chart(grant_ladder(a), width="stretch", config={"displayModeBar": False})
-            st.caption(_md(f"{a['grant']['explanation']} Lower incomes get bigger grants; "
-                           "above the ceiling it's $0."))
+            render_wait(a)
         with tabs[5]:
             for note in a["eligibility"].get("notes", []):
-                st.info(_md(note))
+                st.info(md(note))
             st.markdown("**Assumptions**")
             for item in a["assumptions"]:
-                st.markdown(_md(f"- {item}"))
+                st.markdown(md(f"- {item}"))
             if a["warnings"]:
                 st.markdown("**Warnings**")
                 for w in a["warnings"]:
-                    st.warning(_md(w), icon="⚠️")
+                    st.warning(md(w), icon="⚠️")
             st.markdown("**Where every rule comes from**")
             st.dataframe(
                 [{"Rule": i["rule"], "Status": "✅ verified" if i["verified"] else "⚠️ to confirm",
-                  "Source": i["source_url"]} for i in policy.sourced_items() if not i["rule"].startswith("projects.")],
+                  "Source": i["source_url"]} for i in rules],
                 hide_index=True, width="stretch",
-                column_config={"Source": st.column_config.LinkColumn(
-                    display_text=r"https?://(?:www\.)?([^/]+)")},
+                column_config={"Source": st.column_config.LinkColumn(display_text=r"https?://(?:www\.)?([^/]+)")},
             )
-
-
-def render_comparison(a: dict) -> None:
-    if a["cash"]["verdict"] == "ineligible":
-        st.info("This household isn't eligible to buy a new flat, so neither loan applies.")
-        return
-    req = {**a["request"], "tenure_years": None, "desired_loan": None}
-    bank_rate = st.session_state.get("f_bank_rate", BANK_RATE_DEFAULT * 100) / 100
-    hdb = assess_household(**{**req, "lender": "hdb"})
-    bank = assess_household(**{**req, "lender": "bank", "bank_rate": a["request"].get("bank_rate") or bank_rate})
-    rows = [
-        ("Interest rate", lambda x: f"{x['loan']['interest_rate']:.2%}"),
-        ("Rate type", lambda x: "Pegged to CPF OA + 0.1%" if x["loan"]["lender"] == "hdb" else "Market, can change"),
-        ("Max loan (LTV)", lambda x: f"{_money(x['loan']['loan'])} ({x['loan']['ltv']:.0%})"),
-        ("Tenure", lambda x: f"{x['loan']['tenure_years']} years"),
-        ("Monthly instalment", lambda x: _money(x["loan"]["monthly_instalment"])),
-        ("Total interest", lambda x: _money(x["loan"]["total_interest"])),
-        ("Downpayment at signing", lambda x: f"{x['stages']['signing_pct']:.0%} · "
-                                             f"{_money(x['stages']['signing_downpayment'])}"),
-        ("Must be paid in cash", lambda x: f"{x['loan']['min_cash_pct']:.0%} of price"),
-        ("Cash needed in total", lambda x: _money(x["cash"]["total_cash_needed"])),
-        ("Verdict", lambda x: f"{VERDICTS[x['cash']['verdict']][0]} {VERDICTS[x['cash']['verdict']][1]}"),
-    ]
-    st.dataframe([{"": name, "🏛️ HDB loan": f(hdb), "🏦 Bank loan": f(bank)} for name, f in rows],
-                 hide_index=True, width="stretch")
-    st.plotly_chart(interest_bars(hdb, bank), width="stretch", config={"displayModeBar": False})
-    st.caption("Each loan at its longest standard tenure and largest amount. Bank rates are a market snapshot "
-               "unless you enter your own quote in step ④; they usually change after a lock-in period. "
-               "This is a comparison, not a recommendation.")
 
 
 # ---------- left panel: calculator ----------
@@ -669,14 +469,9 @@ def form_request() -> dict:
         first_timers=s.f_first,
         lender=s.f_lender,
         bank_rate=s.f_bank_rate / 100 if s.f_lender == "bank" else None,
+        other_monthly_debts=s.f_debts,
+        renovation_budget=s.f_reno,
     )
-
-
-def _keep(key: str, low: float, high: float, default: float) -> None:
-    """Re-assert a slider's value before drawing it. A slider whose range changes is a new widget to Streamlit and
-    would otherwise reset to its minimum; out-of-range or missing values fall back to the default."""
-    value = st.session_state.get(key)
-    st.session_state[key] = value if value is not None and low <= value <= high else default
 
 
 def _step(n: str, title: str) -> None:
@@ -696,25 +491,30 @@ def render_form() -> None:
                 with col:
                     st.markdown(f"**{'You' if i == 1 else 'Partner'}**")
                     st.slider("Age", 21, 70, key=f"f_age{i}")
-                    st.slider("Gross monthly income", 0, 20000, step=100, format="$%d", key=f"f_inc{i}")
-                    st.slider("CPF OA balance", 0, 300000, step=1000, format="$%d", key=f"f_oa{i}")
+                    amount("Gross monthly income", f"f_inc{i}", 20000, 100, help="Before CPF deductions.")
+                    amount("CPF OA balance", f"f_oa{i}", 300000, 1000)
             t1, t2 = st.columns(2)
             t1.toggle("All SG citizens", key="f_citizens")
             t2.toggle("First-time buyers", key="f_first")
 
         with st.container(border=True, key="card-savings"):
             _step("2", "Savings and timing")
-            st.slider("Cash savings", 0, 300000, step=1000, format="$%d", key="f_cash")
+            amount("Cash savings", "f_cash", 300000, 1000)
             c1, c2 = st.columns(2)
-            c1.slider("Saving each month", 0, 10000, step=100, format="$%d", key="f_monthly_savings")
+            amount("Saving each month", "f_monthly_savings", 10000, 100, target=c1)
             c2.slider("Years until keys", 0, 8, key="f_years")
+            amount("Renovation & furnishing budget", "f_reno", 150000, 1000,
+                   help="Paid in cash; CPF can't be used for renovation. Leave at $0 to skip.")
 
         with st.container(border=True, key="card-flat"):
             _step("3", "Which flat?")
             pid = st.session_state.f_project
             if pid == CUSTOM:
                 c3, c4 = st.columns([2, 1])
-                c3.slider("Flat price", 100000, 1000000, step=5000, format="$%d", key="f_custom_price")
+                if st.session_state.f_exact:
+                    c3.number_input("Flat price", 50000, 1500000, step=5000, key="f_custom_price")
+                else:
+                    c3.slider("Flat price", 100000, 1000000, step=5000, format="$%d", key="f_custom_price")
                 c4.selectbox("Flat type", FLAT_TYPES, key="f_custom_type", format_func=lambda t: FLAT_LABELS.get(t, t))
             else:
                 p = PROJECTS[pid]
@@ -735,12 +535,14 @@ def render_form() -> None:
                                  label_visibility="collapsed", width="stretch")
             if st.session_state.f_lender == "bank":
                 st.slider("Bank interest rate (% a year)", 1.0, 5.0, step=0.05, format="%.2f%%", key="f_bank_rate",
-                          help=_md(f"Default is a market snapshot of advertised packages "
-                                   f"({policy.node('bank_loan', 'indicative_rate')['as_of']}). "
-                                   "Enter the rate you're actually quoted."))
+                          help=md(f"Default is a market snapshot of advertised packages "
+                                  f"({policy.node('bank_loan', 'indicative_rate')['as_of']}). "
+                                  "Enter the rate you're actually quoted."))
             else:
                 st.caption(f"HDB concessionary rate **{policy.value('hdb_loan', 'interest_rate'):.1%}** "
                            "(CPF OA rate + 0.1%).")
+            amount("Other monthly debts (car, study, cards)", "f_debts", 5000, 50,
+                   help="Banks count these in the 55% TDSR. HDB also weighs them, which this tool doesn't model.")
 
             req = form_request()
             pre = assess_household(**req)["loan"]
@@ -748,9 +550,9 @@ def render_form() -> None:
             if max_t >= 5:
                 _keep("f_tenure", 5, max_t, max(5, min(pre["tenure_years"], max_t)))
                 st.slider("Loan tenure (years)", 5, max_t, key="f_tenure",
-                          help="Longer = smaller instalments but more interest. Bank loans over 25 years drop "
-                               "the LTV to 55%." if st.session_state.f_lender == "bank" else
-                               "Longer = smaller instalments but more interest.")
+                          help="Longer = smaller instalments but more interest."
+                          + (" Bank loans over 25 years drop the LTV to 55%." if st.session_state.f_lender == "bank"
+                             else ""))
                 req["tenure_years"] = st.session_state.f_tenure
             max_l = int(assess_household(**req)["loan"]["max_loan"])
             st.toggle("Borrow the maximum I'm allowed", key="f_borrow_max")
@@ -762,7 +564,43 @@ def render_form() -> None:
     st.session_state.assessment = assess_household(**req)
 
 
-# ---------- left panel: chat mode ----------
+# ---------- left panel: agent demo and chat ----------
+def render_tool_calls(calls: list) -> None:
+    for i, c in enumerate(calls, 1):
+        with st.expander(f"🔧 {i}. `{c.name}`" + (" ⚠️ error" if c.is_error else ""), expanded=False):
+            st.json({"input": c.input, "output": c.output}, expanded=1)
+
+
+def render_demo() -> None:
+    with left:
+        st.markdown(
+            '<div class="demo">🤖 <b>Agent demo, free replay.</b> Pick an example above. The agent\'s tool calls '
+            'run live on the real calculators, in the same order Claude uses. The answer\'s wording is a fixed '
+            'template showing the format Claude is asked for; it is not written by Claude. '
+            'Free-text questions need an API key.</div>', unsafe_allow_html=True)
+        st.graphviz_chart(
+            'digraph { rankdir=LR; bgcolor="transparent"; node [shape=box, style="rounded,filled", '
+            'fillcolor="#eef2f8", color="#2a78d6", fontname="Inter", fontsize=11]; edge [color="#898781"]; '
+            'Q [label="Your question"]; A [label="Claude agent\\npicks tools,\\nnever does maths"]; '
+            'T [label="Python calculators\\n(tested)"]; P [label="policy_2026.yaml\\nsourced + dated", '
+            'shape=cylinder]; R [label="Answer + charts"]; Q -> A -> T; T -> A [label=" results", fontsize=9]; '
+            'P -> T; A -> R }', width="stretch")
+        label = st.session_state.pop("pending_demo", None)
+        if label:
+            request, pid, flat_type = example_request(EXAMPLES[label]["form"])
+            st.session_state.demo_chat.append((EXAMPLES[label]["prompt"], demo_turn(request, pid, flat_type)))
+        for prompt, turn in st.session_state.demo_chat:
+            st.chat_message("user").markdown(md(prompt))
+            with st.chat_message("assistant", avatar="🤖"):
+                with st.status(f"Called {len(turn.tool_calls)} tools", state="complete", expanded=False):
+                    render_tool_calls(turn.tool_calls)
+                st.markdown(turn.text)
+                st.caption("Replay: real tool calls and numbers, template wording.")
+        if st.session_state.demo_chat:
+            st.session_state.assessment = st.session_state.demo_chat[-1][1].last_assessment
+        st.chat_input("Free-text questions need an API key. Pick an example above.", disabled=True)
+
+
 def render_chat() -> None:
     with left:
         chat_box = st.container(height=560, border=True)
@@ -802,16 +640,18 @@ def render_chat() -> None:
 
         if st.session_state.tool_log:
             with st.expander(f"🔧 Agent tool calls ({len(st.session_state.tool_log)})"):
-                for i, c in enumerate(st.session_state.tool_log, 1):
-                    st.markdown(f"**{i}. `{c.name}`**" + (" ⚠️ error" if c.is_error else ""))
-                    st.json({"input": c.input, "output": c.output}, expanded=False)
+                render_tool_calls(st.session_state.tool_log)
 
 
 # ---------- page ----------
 render_explorer()
 
-st.markdown('<div class="section">🧮 Check your affordability'
-            '<small>Start from an example, then make it yours.</small></div>', unsafe_allow_html=True)
+head, help_col = st.columns([4, 1], vertical_alignment="bottom")
+head.markdown('<div class="section">🧮 Check your affordability'
+              '<small>Start from an example, then make it yours.</small></div>', unsafe_allow_html=True)
+with help_col.popover("📖 Jargon buster", width="stretch"):
+    for term, meaning in jargon():
+        st.markdown(md(f"**{term}**: {meaning}"))
 ex_cols = st.columns([1, 1, 1, 0.7])
 for col, label in zip(ex_cols, EXAMPLES):
     col.button(label, on_click=load_example, args=(label,), width="stretch")
@@ -819,8 +659,10 @@ ex_cols[-1].button("↺  Start over", on_click=start_over, width="stretch", type
 
 left, right = st.columns([5, 7], gap="large")
 
-if key_available and mode == CHAT_MODE:
+if mode == CHAT_MODE and key_available:
     render_chat()
+elif mode == DEMO_MODE:
+    render_demo()
 else:
     render_form()
 

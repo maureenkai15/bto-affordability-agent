@@ -46,10 +46,10 @@ def test_has_api_key(monkeypatch, key, expected):
     assert has_api_key() is expected
 
 
-def test_chat_mode_disabled_without_key(no_key):
+def test_chat_mode_hidden_without_key(no_key):
     at = start()
-    assert at.sidebar.radio[0].disabled
-    assert at.sidebar.radio[0].value == "Calculator (free)"
+    assert at.sidebar.radio[0].options == ["🧮 Calculator", "🤖 Agent demo"]   # no paid chat option
+    assert at.sidebar.radio[0].value == "🧮 Calculator"
 
 
 def test_opens_on_a_filled_in_example(no_key):
@@ -131,4 +131,46 @@ def test_borrow_less(no_key):
 def test_comparison_tab_shows_both_lenders(no_key):
     at = start()
     frames = [d for d in at.dataframe if "🏦 Bank loan" in d.value.columns]
-    assert frames and len(frames[0].value) == 10
+    assert frames and len(frames[0].value) == 11
+
+
+
+def test_agent_demo_replays_real_tool_calls_for_free(no_key):
+    at = start()
+    at.sidebar.radio[0].set_value("🤖 Agent demo").run()
+    at = click(at, "👫  Couple, 25 & 26 · $8k")
+    assert any("75% loan-to-value cap" in m.value for m in at.markdown)        # templated answer, real numbers
+    assert {m.label: m.value for m in at.metric}["HDB loan"] == "$270,000"
+
+
+def test_plain_english_summary(no_key):
+    at = start()
+    assert any("You'd borrow" in m.value and "270,000" in m.value for m in at.markdown)
+
+
+def test_type_exact_numbers_mode(no_key):
+    at = start()
+    at.sidebar.toggle(key="f_exact").set_value(True).run()
+    at.number_input(key="f_cash").set_value(12345).run()
+    assert not at.exception
+    assert at.session_state["f_cash"] == 12345
+
+
+def test_renovation_budget_creates_gap(no_key):
+    at = start()
+    at.slider(key="f_reno").set_value(20000).run()
+    assert {m.label: m.value for m in at.metric}["Cash gap"] == "$5,910"     # 55,910 needed vs 50,000
+
+
+def test_wait_tab_projects_years(no_key):
+    at = start()
+    frames = [d for d in at.dataframe if "CPF OA" in d.value.columns]
+    assert frames and len(frames[0].value) == 4                                # now + 3 years
+    assert frames[0].value["CPF OA"].iloc[1] == "$68,208"                      # hand-checked in test_projection
+
+
+def test_zero_income_does_not_crash(no_key):
+    at = start()
+    at.slider(key="f_inc1").set_value(0).run()
+    at.slider(key="f_inc2").set_value(0).run()
+    assert not at.exception

@@ -161,6 +161,11 @@ bank_loan:
     note: "MAS medium-term interest rate floor used by banks to compute MSR/TDSR (higher of 4% or the actual rate)."
     source_url: "https://www.mas.gov.sg/news/media-releases/2022/measures-to-promote-sustainable-conditions-in-the-property-market-by-ensuring-prudent-borrowing-and-moderating-demand"
     verified: true
+  tdsr:
+    value: 0.55
+    note: "Total Debt Servicing Ratio: all monthly debt repayments, including the new housing loan, at most 55% of gross monthly income. Applies to loans from financial institutions; HDB assesses other commitments in its own credit assessment."
+    source_url: "https://www.mas.gov.sg/regulation/explainers/new-housing-loans/msr-and-tdsr-rules"
+    verified: true
   indicative_rate:
     value: 0.016
     as_of: "2026-10-23"
@@ -177,6 +182,40 @@ payment_stages:
     note: "Paid at the Agreement for Lease signing, by CPF and/or cash; the option fee counts towards it. Eligible young couples under deferred income assessment pay 2.5%. The balance is due at key collection, when the HDB loan is disbursed."
     source_url: "https://www.hdb.gov.sg"
     confirmed_by: 'HDB Annex B, Administrative details for February 2026 BTO and SBF exercises, para 15 and footnotes 4-5; checked 24 Oct 2026'
+    verified: true
+
+# CPF contributions, for projecting the Ordinary Account forward ("what if we wait?").
+# Monthly wages above $750, Ordinary Wages only (bonuses / Additional Wages ignored), Singapore Citizens.
+cpf:
+  ordinary_wage_ceiling:
+    value: 8000
+    effective_from: "2026-01-01"
+    source_url: "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf"
+    verified: true
+  min_wage_full_rate:
+    value: 750
+    note: "Contribution rates below apply to monthly wages above this; lower wages are projected as no OA contributions (conservative)."
+    source_url: "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf"
+    verified: true
+  contribution_and_allocation:
+    note: "total_rate = employer + employee share of wages; oa_ratio = share of the contribution allocated to the Ordinary Account. From 1 Jan 2026, private sector employees."
+    source_url: "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf"
+    confirmed_by: 'CPF "Allocation Rates from 1 January 2026" (https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFAllocationRatesfromJanuary2026.pdf)'
+    verified: true
+    bands:
+      - {max_age: 35, total_rate: 0.37, oa_ratio: 0.6217}
+      - {max_age: 45, total_rate: 0.37, oa_ratio: 0.5677}
+      - {max_age: 50, total_rate: 0.37, oa_ratio: 0.5136}
+      - {max_age: 55, total_rate: 0.37, oa_ratio: 0.4055}
+      - {max_age: 60, total_rate: 0.34, oa_ratio: 0.353}
+      - {max_age: 65, total_rate: 0.25, oa_ratio: 0.14}
+      - {max_age: 70, total_rate: 0.165, oa_ratio: 0.0607}
+      - {max_age: null, total_rate: 0.125, oa_ratio: 0.08}
+  oa_interest_rate:
+    value: 0.025
+    note: "Base OA interest. HDB states its loan rate (2.6%) is the OA rate + 0.1%. Extra interest on the first $60,000 is ignored (conservative)."
+    source_url: "https://www.cpf.gov.sg"
+    confirmed_by: 'HDB "Housing Loan from HDB" page: concessionary rate pegged at 0.1%-point above the prevailing CPF OA rate'
     verified: true
 
 upfront:

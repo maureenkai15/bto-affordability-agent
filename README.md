@@ -1,9 +1,12 @@
 # 🏠 BTO Affordability Agent
 
+[![tests](https://github.com/maureenkai15/bto-affordability-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/maureenkai15/bto-affordability-agent/actions/workflows/tests.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![policy as of 24 Oct 2026](https://img.shields.io/badge/policy-24%20Oct%202026-1baf7a)
+
 **"Can we afford a 4-room BTO in Tengah?"** An AI agent that answers this for any Singapore household, using 2026 HDB and CPF rules, and shows exactly where every number comes from.
 
-<!-- Replace with docs/demo.gif once recorded -->
-![BTO affordability calculator: project map of Singapore, calculator steps, verdict card and money-flow waterfall](docs/screenshot.png)
+![Demo: picking a project on the map, switching examples and loans, and opening the rates and wait tabs](docs/demo.gif)
 
 **Live app:** _add your Streamlit Cloud link here_
 
@@ -11,14 +14,23 @@
 
 Most couples in their 20s piece this question together from HDB pages, CPF pages and blog posts. Each source covers one piece: grants, loan limits or prices. None of them shows the whole picture for *your* incomes and savings, and many blogs are still out of date (the 80% LTV and the $14,000 income ceiling no longer apply).
 
-## Two modes
+## What it does
+
+- **20 BTO projects across 11 towns** on a map: 2026 launches with HDB's own price ranges, and the November 2026 exercise.
+- **HDB or bank loan**, your tenure and loan amount, other debts (TDSR), and a rate what-if curve.
+- **When you pay**: option fee, signing downpayment, key collection, monthly instalments, one-off costs.
+- **"What if we wait?"**: projects CPF OA (official 2026 contribution rates), savings, pay rises and prices year by year.
+- **Plain English**: a summary of every result, a jargon buster, and a mode for typing exact numbers.
+
+## Three modes
 
 | Mode | Needs | Cost |
 | --- | --- | --- |
-| **Calculator** (default) | nothing | free: live sliders run the Python calculators directly |
-| **Chat** | an Anthropic API key in `.env` or Streamlit Secrets | paid per token (Claude Pro does not cover the API) |
+| **🧮 Calculator** (default) | nothing | free: live sliders run the Python calculators directly |
+| **🤖 Agent demo** | nothing | free: replays the agent's tool calls on the real calculators; the answer wording is a labelled template, not Claude |
+| **💬 Chat with Claude** | an Anthropic API key in `.env` or Streamlit Secrets | paid per token (Claude Pro does not cover the API); hidden without a key |
 
-Both modes use the same calculators and the same breakdown panel. Without a key, chat mode is switched off and the app never calls the API, so the public demo costs nothing.
+All modes share the same calculators and results panel. Without a key the app never calls the API, so the public demo costs nothing.
 
 ## How it works
 
@@ -96,10 +108,10 @@ Values marked `verified: false` in `policy_2026.yaml` (currently only the legal 
 
 `tests/test_scenarios.py` covers eight real households: a typical dual-income couple, a couple just above the $9,000 grant cliff, a couple eligible only under the new $16,000 ceiling, a couple above it, a single-income household where the 30% MSR binds, a single aged 35+, a citizen + PR couple, and low-CPF vs high-CPF households. Plus an older buyer whose loan tenure shrinks while waiting for keys.
 
-`tests/test_app.py` runs the Streamlit app headlessly in calculator mode with the 3 examples, live slider updates (hand-checked numbers) and asserts the API client is never created.
+`tests/test_app.py` runs the Streamlit app headlessly: the 3 examples, project picking, bank loans, tenure, borrowing less, typed inputs, the agent demo and the wait tab, all with hand-checked numbers, and asserts the API client is never created. `tests/test_projection.py` checks CPF projections, TDSR and renovation budgets by hand. GitHub Actions runs everything on every push.
 
 ```
-100 passed
+118 passed
 ```
 
 ## Run it
@@ -108,8 +120,8 @@ Values marked `verified: false` in `policy_2026.yaml` (currently only the legal 
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pytest                             # 100 tests, no API key needed
-streamlit run app.py               # web app, free calculator mode
+pytest                             # 118 tests, no API key needed
+streamlit run app.py               # web app: calculator and agent demo, both free
 
 # Optional, paid: chat mode
 cp .env.example .env               # then paste your Anthropic API key
@@ -120,23 +132,31 @@ python cli.py                      # chat in the terminal (or use Chat mode in t
 
 ```
 bto-agent/
-├── app.py                 Streamlit UI: project map, live calculator or chat, verdict, 6 result tabs
+├── app.py                 Streamlit page: explorer, calculator / agent demo / chat, results
+├── ui/
+│   ├── charts.py          Every Plotly chart (data in, figure out)
+│   ├── explain.py         Plain-English summary and jargon buster
+│   └── theme.py           Colours, CSS, formatting helpers
 ├── cli.py                 Terminal version
 ├── policy_2026.yaml       Every policy number, with source and as-of date
 ├── agent/
 │   ├── agent.py           Tool-use loop (Anthropic SDK)
+│   ├── demo.py            Free replay: real tool calls, template wording
 │   └── tools.py           Tool schemas + dispatcher
 ├── calculators/           Pure functions, no LLM
 │   ├── eligibility.py  grants.py  loan.py  upfront.py  cash.py
-│   ├── assess.py          Chains them for a full assessment
+│   ├── assess.py          Projects + chains them for a full assessment
+│   ├── projection.py      "What if we wait?" (CPF contributions, savings, growth)
 │   └── policy.py          Loads the YAML, flags stale/unverified values
-└── tests/                 Unit tests, 8 household scenarios, agent loop with a fake client, app in form mode
+└── tests/                 Unit, scenario, projection, agent (fake client + demo) and headless app tests
 ```
 
 ## Limitations
 
 - Prices for the November 2026 exercise are indicative until HDB publishes them at launch.
 - Assumes first-timers and that current income equals the 12-month average HDB uses.
+- The wait projection uses yearly steps, monthly wages only and base OA interest; pay and price growth are your guesses.
+- HDB's own credit assessment of other debts is not modelled (bank TDSR is).
 - Upcoming project prices are references (a comparable launched project), not HDB prices.
 - Bank rates are user inputs; real packages change after a lock-in period.
 - Two or more singles buying together (family grant table, $9,000 ceiling) is not modelled yet.

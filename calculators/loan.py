@@ -64,8 +64,10 @@ def max_loan(
     income_weighted_age_at_loan: float | None = None,
     tenure_years: int | None = None,
     desired_loan: float | None = None,
+    other_monthly_debts: float = 0.0,
 ) -> dict:
     """The loan is the smallest of: the LTV cap, the 30% MSR, price minus grants, and what you choose to borrow.
+    Bank loans must also fit the 55% TDSR together with other monthly debts (car, study, card instalments).
 
     HDB sizes the MSR limit at its rate floor and banks at the MAS floor; the instalment uses the actual rate.
     lender: "hdb" or "bank". tenure_years: a shorter tenure than the maximum, if wanted.
@@ -92,6 +94,9 @@ def max_loan(
     needed = max(0.0, flat_price - grants)
 
     limits = {"ltv": by_ltv, "msr": by_msr, "needed": needed}
+    if lender == "bank" and tenure > 0:
+        tdsr_room = max(0.0, monthly_household_income * policy.value("bank_loan", "tdsr") - other_monthly_debts)
+        limits["tdsr"] = principal_for_instalment(tdsr_room, assessment_rate, tenure)
     if desired_loan is not None:
         limits["chosen"] = max(0.0, desired_loan)
     binding = min(limits, key=limits.get)
@@ -103,6 +108,7 @@ def max_loan(
         "msr": f"{msr:.0%} mortgage servicing ratio",
         "needed": "price minus grants (you don't need more)",
         "chosen": "the amount you chose to borrow",
+        "tdsr": f"{policy.value('bank_loan', 'tdsr'):.0%} total debt servicing ratio (with your other debts)",
     }
     return {
         "lender": lender,
