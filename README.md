@@ -2,8 +2,8 @@
 
 **"Can we afford a 4-room BTO in Tengah?"** An AI agent that answers this for any Singapore household, using 2026 HDB and CPF rules, and shows exactly where every number comes from.
 
-<!-- Replace with your demo GIF: record a 30-second run of one example question -->
-![Demo](docs/demo.gif)
+<!-- Replace with docs/demo.gif once recorded -->
+![BTO affordability calculator: sliders on the left, verdict card, metrics and money-flow waterfall on the right](docs/screenshot.png)
 
 **Live app:** _add your Streamlit Cloud link here_
 
