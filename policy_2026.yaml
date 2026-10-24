@@ -70,28 +70,41 @@ ehg:
 hdb_loan:
   interest_rate:
     value: 0.026
-    note: "CPF OA rate (2.5%) + 0.1%."
+    note: "Concessionary rate: CPF OA rate (2.5%) + 0.1%, reviewed quarterly. Used for the actual instalment."
     source_url: "https://www.edgeprop.sg/property-news/guide-hdb-concessionary-housing-loan"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
+    verified: true
+  assessment_rate_floor:
+    value: 0.03
+    effective_from: "2022-09-30"
+    note: "HDB sizes the eligible loan (MSR limit) at the higher of this floor and the prevailing rate."
+    source_url: "https://www.hdb.gov.sg/about-us/news-and-publications/press-releases/29092022-propertymeasures2022"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
   ltv:
     value: 0.75
     effective_from: "2024-08-20"
-    note: "Lowered from 80%. Many blogs still say 80% - outdated."
+    note: "Lowered from 80% for flat applications from the Oct 2024 sales exercise. Pro-rated only if the lease does not cover the youngest applicant to 95, which a new 99-year flat always does."
     source_url: "https://www.shopback.sg/blog/finance/hdb-vs-bank-loan"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
   msr:
     value: 0.30
     note: "Mortgage Servicing Ratio: monthly instalment <= 30% of gross monthly household income."
     source_url: "https://www.shopback.sg/blog/finance/hdb-vs-bank-loan"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
   max_tenure_years:
     value: 25
     source_url: "https://www.smartcalculator.sg/housing/mortgage-calculator"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
   tenure_age_limit:
     value: 65
-    note: "SIMPLIFICATION: tenure capped so the oldest applicant finishes by 65. HDB's exact rule may differ - confirm."
-    verified: false
+    note: "Repayment period is the shortest of 25 years, 65 minus the AVERAGE age of the applicants, and remaining lease minus 20 years. The lease cap cannot bind for a new 99-year flat, so it is not modelled. Fractional years are rounded down (assumption)."
+    source_url: "https://www.hdb.gov.sg"
+    confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
+    verified: true
 
 upfront:
   option_fee:

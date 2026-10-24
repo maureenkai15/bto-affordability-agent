@@ -42,7 +42,7 @@ def test_5_one_income_msr_binds():
     r = run(incomes=[4000, 0], ages=[28, 27], cpf_oa_balances=[30000, 0], cash_savings=20000)
     assert r["grant"]["grant"] == 80000
     assert r["loan"]["binding_limit"] == "msr"
-    assert r["loan"]["msr_used_pct"] == pytest.approx(30.0, abs=0.1)
+    assert r["loan"]["msr_used_pct"] == pytest.approx(28.7, abs=0.1)  # sized at 3.0% floor, paid at 2.6%
 
 
 def test_6_single_35_plus():
@@ -67,4 +67,4 @@ def test_8_low_oa_vs_high_oa(oa, cash, cpf_part):
 def test_older_buyer_gets_shorter_tenure_after_wait():
     r = run(incomes=[5000, 4000], ages=[44, 42], cpf_oa_balances=[80000, 60000], cash_savings=50000,
             years_until_key_collection=4)
-    assert r["loan"]["tenure_years"] == 17       # 65 - (44 + 4)
+    assert r["loan"]["tenure_years"] == 18       # 65 - (average of 44 and 42 = 43, + 4 years wait)

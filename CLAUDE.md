@@ -22,4 +22,4 @@ Purpose: help Singapore adults check if they can afford a BTO flat, using 2026 H
 3. Update the policy table in README.md.
 
 ## Open items to verify
-Values with `verified: false`: singles EHG bands (half-scale assumption), tenure age rule, option fee, buyer's stamp duty tiers, legal estimate.
+Values with `verified: false`: singles EHG bands (half-scale assumption), option fee, buyer's stamp duty tiers, legal estimate.

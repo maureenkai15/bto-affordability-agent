@@ -26,7 +26,7 @@ def test_ehg_family_bands_are_decreasing_and_reach_ceiling():
 
 
 def test_core_loan_rules_are_verified():
-    for key in ("interest_rate", "ltv", "msr", "max_tenure_years"):
+    for key in ("interest_rate", "assessment_rate_floor", "ltv", "msr", "max_tenure_years", "tenure_age_limit"):
         assert policy.node("hdb_loan", key)["verified"] is True
 
 
@@ -88,27 +88,31 @@ def test_zero_principal_zero_instalment():
     assert monthly_instalment(0) == 0
 
 
-@pytest.mark.parametrize("age, years", [(25, 25), (40, 25), (45, 20), (60, 5), (66, 0)])
+# HDB: shortest of 25 years and 65 minus the applicants' average age; fractional years rounded down
+@pytest.mark.parametrize("age, years", [(25, 25), (40, 25), (45, 20), (47.5, 17), (60, 5), (66, 0)])
 def test_tenure(age, years):
     assert loan_tenure(age) == years
 
 
 def test_ltv_binds_for_high_income():
-    r = max_loan(flat_price=360000, grants=0, monthly_household_income=16000, oldest_applicant_age_at_loan=30)
+    r = max_loan(flat_price=360000, grants=0, monthly_household_income=16000, average_applicant_age_at_loan=30)
     assert r["binding_limit"] == "ltv"
     assert r["loan"] == pytest.approx(270000)
 
 
 def test_msr_binds_for_single_low_income():
-    # $1,200/month can service ~ 1200 / 1814.67 * 400k = ~$264,500 over 25 years
-    r = max_loan(flat_price=360000, grants=80000, monthly_household_income=4000, oldest_applicant_age_at_loan=28)
+    # HDB sizes the loan at the 3.0% floor: 1200 * (1 - 1.0025^-300) / 0.0025 = $253,051.74.
+    # The instalment is then charged at 2.6%: $1,148.02, i.e. 28.7% of $4,000 (under the 30% cap).
+    r = max_loan(flat_price=360000, grants=80000, monthly_household_income=4000, average_applicant_age_at_loan=28)
     assert r["binding_limit"] == "msr"
-    assert r["loan"] == pytest.approx(264508, rel=0.002)
-    assert r["monthly_instalment"] == pytest.approx(1200, abs=0.5)
+    assert r["assessment_rate"] == 0.03
+    assert r["loan"] == pytest.approx(253051.74, abs=1)
+    assert r["monthly_instalment"] == pytest.approx(1148.02, abs=0.5)
+    assert r["msr_used_pct"] == 28.7
 
 
 def test_needed_binds_when_grants_are_large():
-    r = max_loan(flat_price=200000, grants=120000, monthly_household_income=1500, oldest_applicant_age_at_loan=30)
+    r = max_loan(flat_price=200000, grants=120000, monthly_household_income=1500, average_applicant_age_at_loan=30)
     assert r["binding_limit"] in ("needed", "msr")
     assert r["loan"] <= 80000
 

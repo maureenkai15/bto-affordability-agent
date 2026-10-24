@@ -48,9 +48,11 @@ flowchart LR
 2. **Grant:** Enhanced CPF Housing Grant from HDB's 16-band income table, up to $120,000.
 3. **HDB loan:** the smallest of three limits:
    - 75% of the flat price (LTV)
-   - the loan whose instalment is 30% of gross income (MSR)
+   - the loan whose instalment is 30% of gross income (MSR), sized at HDB's 3.0% interest rate floor
    - price minus grants (what you actually need)
-4. **Instalment:** standard annuity formula at 2.6% p.a.
+
+   Tenure is the shorter of 25 years and 65 minus the applicants' average age at key collection.
+4. **Instalment:** standard annuity formula at the actual 2.6% p.a. (so an MSR-bound loan uses about 29% of income, not 30%)
 
    `instalment = L × r / (1 − (1 + r)^−n)`, where `r = 2.6% / 12` and `n = 12 × tenure`
 
@@ -64,10 +66,12 @@ flowchart LR
 | Income ceiling, singles 35+ | $8,000/month | same |
 | EHG, families | up to $120,000, ceiling $9,000 | [gov.sg](https://www.togetherforbetter.gov.sg/lifestage/youngadults/) |
 | HDB loan rate | 2.6% p.a. | [EdgeProp](https://www.edgeprop.sg/property-news/guide-hdb-concessionary-housing-loan) |
-| LTV / MSR | 75% / 30% | [ShopBack](https://www.shopback.sg/blog/finance/hdb-vs-bank-loan) |
+| LTV / MSR | 75% / 30% | [ShopBack](https://www.shopback.sg/blog/finance/hdb-vs-bank-loan), confirmed on HDB "Housing Loan from HDB" |
+| Loan assessment rate floor | 3.0% (loan sized at the higher of this and 2.6%) | [HDB press release](https://www.hdb.gov.sg/about-us/news-and-publications/press-releases/29092022-propertymeasures2022) |
+| Loan tenure | shortest of 25 years and 65 minus average age | HDB "Housing Loan from HDB" (updated 23 Aug 2026) |
 | Tengah Garden Ave 4-room | ~$360k–$380k indicative (Nov 2026 exercise) | [SG Property Index](https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/) |
 
-Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, stamp duty tiers, option fee, legal estimate, tenure age rule) are shown as warnings in the app until confirmed on hdb.gov.sg and iras.gov.sg.
+Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, stamp duty tiers, option fee, legal estimate) are shown as warnings in the app until confirmed on hdb.gov.sg and iras.gov.sg.
 
 ## Tested scenarios
 
@@ -76,7 +80,7 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, stamp 
 `tests/test_app.py` runs the Streamlit app headlessly in form mode with the 3 sidebar examples (hand-checked numbers) and asserts the API client is never created.
 
 ```
-59 passed
+60 passed
 ```
 
 ## Run it
@@ -85,7 +89,7 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, stamp 
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pytest                             # 59 tests, no API key needed
+pytest                             # 60 tests, no API key needed
 streamlit run app.py               # web app, free form mode
 
 # Optional, paid: chat mode

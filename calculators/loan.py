@@ -1,6 +1,8 @@
 """HDB loan maths: instalment, tenure and the three limits on the loan size."""
 from __future__ import annotations
 
+import math
+
 from . import policy
 
 
@@ -26,28 +28,32 @@ def principal_for_instalment(instalment: float, annual_rate: float, years: int) 
     return instalment * (1 - (1 + r) ** -n) / r
 
 
-def loan_tenure(oldest_applicant_age_at_loan: int) -> int:
-    """Shorter of the max tenure and the years left until the age limit (simplified rule, flagged in policy)."""
+def loan_tenure(average_applicant_age_at_loan: float) -> int:
+    """Shorter of the max tenure and the age limit minus the applicants' average age, in whole years (rounded down)."""
     max_years = policy.value("hdb_loan", "max_tenure_years")
     age_limit = policy.value("hdb_loan", "tenure_age_limit")
-    return max(0, min(max_years, age_limit - oldest_applicant_age_at_loan))
+    return max(0, min(max_years, math.floor(age_limit - average_applicant_age_at_loan)))
 
 
 def max_loan(
     flat_price: float,
     grants: float,
     monthly_household_income: float,
-    oldest_applicant_age_at_loan: int,
+    average_applicant_age_at_loan: float,
 ) -> dict:
-    """The HDB loan is the smallest of three limits: LTV, MSR, and what you actually need."""
+    """The HDB loan is the smallest of three limits: LTV, MSR, and what you actually need.
+
+    HDB sizes the MSR limit at the higher of the rate floor and the actual rate; the instalment uses the actual rate.
+    """
     rate = policy.value("hdb_loan", "interest_rate")
+    assessment_rate = max(rate, policy.value("hdb_loan", "assessment_rate_floor"))
     ltv = policy.value("hdb_loan", "ltv")
     msr = policy.value("hdb_loan", "msr")
-    tenure = loan_tenure(oldest_applicant_age_at_loan)
+    tenure = loan_tenure(average_applicant_age_at_loan)
 
     by_ltv = flat_price * ltv
     max_instalment = monthly_household_income * msr
-    by_msr = principal_for_instalment(max_instalment, rate, tenure) if tenure > 0 else 0.0
+    by_msr = principal_for_instalment(max_instalment, assessment_rate, tenure) if tenure > 0 else 0.0
     needed = max(0.0, flat_price - grants)
 
     limits = {"ltv": by_ltv, "msr": by_msr, "needed": needed}
@@ -69,6 +75,7 @@ def max_loan(
         "limit_needed": round(needed, 2),
         "tenure_years": tenure,
         "interest_rate": rate,
+        "assessment_rate": assessment_rate,
         "monthly_instalment": round(instalment, 2),
         "msr_max_instalment": round(max_instalment, 2),
         "msr_used_pct": round(instalment / monthly_household_income * 100, 1) if monthly_household_income else None,

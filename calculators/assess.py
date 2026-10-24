@@ -52,14 +52,14 @@ def assess_household(
     first_timers: bool = True,
 ) -> dict:
     income = float(sum(incomes))
-    oldest_at_loan = max(ages) + years_until_key_collection
+    average_age_at_loan = sum(ages) / len(ages) + years_until_key_collection
 
     elig = check_eligibility(household_type, income, ages, all_singapore_citizens, first_timers)
     ehg = get_ehg_grant(household_type, income, first_timers)
     grants = ehg["grant"]
 
     if elig["eligible"]:
-        loan = max_loan(flat_price, grants, income, oldest_at_loan)
+        loan = max_loan(flat_price, grants, income, average_age_at_loan)
     else:
         loan = {"loan": 0.0, "binding_limit": "ineligible", "binding_limit_label": "not eligible for HDB loan",
                 "monthly_instalment": 0.0, "tenure_years": 0, "msr_used_pct": None}
@@ -83,7 +83,7 @@ def assess_household(
             "household_type": household_type,
             "monthly_household_income": income,
             "ages": ages,
-            "oldest_age_at_loan": oldest_at_loan,
+            "average_age_at_loan": average_age_at_loan,
             "cpf_oa_total": float(sum(cpf_oa_balances)),
             "cash_savings": cash_savings,
             "flat_price": flat_price,
@@ -99,7 +99,11 @@ def assess_household(
             f"Policy values as of {policy.as_of()}.",
             "Average gross monthly household income over the past 12 months equals the incomes given.",
             "No other grants (e.g. Proximity Housing Grant does not apply to BTOs).",
-            f"HDB loan at {policy.value('hdb_loan', 'interest_rate'):.1%}, tenure {loan['tenure_years']} years.",
+            f"HDB loan at {policy.value('hdb_loan', 'interest_rate'):.1%}, tenure {loan['tenure_years']} years "
+            f"(shortest of {policy.value('hdb_loan', 'max_tenure_years')} years and "
+            f"{policy.value('hdb_loan', 'tenure_age_limit')} minus the applicants' average age at key collection).",
+            f"Loan size under the {policy.value('hdb_loan', 'msr'):.0%} MSR is assessed at the "
+            f"{policy.value('hdb_loan', 'assessment_rate_floor'):.1%} interest rate floor, as HDB does.",
             "CPF OA balances are used for the downpayment before cash.",
             f"You should keep {EMERGENCY_BUFFER_MONTHS} months of instalments as emergency cash.",
             "Upfront costs (option fee, stamp duty, legal) are estimates.",

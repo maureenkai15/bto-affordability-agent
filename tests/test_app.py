@@ -62,7 +62,8 @@ def test_example_one_income_msr_binds(no_key):
     at = click_example(start(), "One income, $4k")
     metrics = {m.label: m.value for m in at.metric}
     assert metrics["Grant (EHG)"] == "$80,000"     # $3,501-$4,000 band
-    assert metrics["Monthly instalment"] == "$1,200"  # 30% MSR x $4,000
+    assert metrics["HDB loan"] == "$253,052"           # 30% x $4,000 sized at the 3.0% floor
+    assert metrics["Monthly instalment"] == "$1,148"   # same loan paid at 2.6%
     assert any(c.value.startswith("Loan limited by: **30% mortgage servicing ratio**") for c in at.caption)
 
 

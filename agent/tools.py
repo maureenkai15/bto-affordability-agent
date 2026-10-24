@@ -62,18 +62,19 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "name": "max_loan",
-        "description": "Largest HDB loan: the smallest of the 75% LTV cap, the 30% mortgage servicing ratio, "
-                       "and price minus grants. Also returns tenure and monthly instalment.",
+        "description": "Largest HDB loan: the smallest of the 75% LTV cap, the 30% mortgage servicing ratio "
+                       "(assessed at HDB's interest rate floor), and price minus grants. "
+                       "Also returns tenure and monthly instalment.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "flat_price": {"type": "number"},
                 "grants": {"type": "number"},
                 "monthly_household_income": {"type": "number"},
-                "oldest_applicant_age_at_loan": {"type": "integer",
-                                                 "description": "Age of the oldest applicant at key collection."},
+                "average_applicant_age_at_loan": {"type": "number",
+                                                  "description": "Average age of the applicants at key collection."},
             },
-            "required": ["flat_price", "grants", "monthly_household_income", "oldest_applicant_age_at_loan"],
+            "required": ["flat_price", "grants", "monthly_household_income", "average_applicant_age_at_loan"],
         },
     },
     {
