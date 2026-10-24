@@ -4,12 +4,15 @@ Run:  python cli.py
 """
 from dotenv import load_dotenv
 
-from agent import run_agent
+from agent import has_api_key, run_agent
 
 load_dotenv()
 
 
 def main() -> None:
+    if not has_api_key():
+        print("Chat needs an Anthropic API key (paid) in .env. For the free version run: streamlit run app.py")
+        return
     print("BTO Affordability Agent. Type 'quit' to exit.\n")
     messages: list = []
     while True:

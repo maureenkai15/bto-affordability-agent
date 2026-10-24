@@ -13,6 +13,13 @@ from .tools import TOOLS, run_tool, to_json
 
 MODEL = os.getenv("BTO_AGENT_MODEL", "claude-sonnet-5-5")
 MAX_STEPS = 12
+PLACEHOLDER_KEY = "sk-ant-..."  # the value shipped in .env.example
+
+
+def has_api_key() -> bool:
+    """True only for a real-looking key. Without one the app stays in free form mode and never calls the API."""
+    key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    return key.startswith("sk-ant-") and key != PLACEHOLDER_KEY
 
 SYSTEM_PROMPT = f"""You help Singapore residents check whether they can afford a BTO flat.
 Policy values are as of {policy.as_of()}.
