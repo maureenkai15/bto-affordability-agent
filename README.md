@@ -65,16 +65,18 @@ flowchart LR
 | Income ceiling, families | $16,000/month (from 24 Aug 2026) | [PropertyNet](https://propertynet.sg/ndr-2026-bto-income-ceiling-16000-ec-18000-extra-ballot-chances/) |
 | Income ceiling, singles 35+ | $8,000/month | same |
 | EHG, families | up to $120,000, ceiling $9,000 | [gov.sg](https://www.togetherforbetter.gov.sg/lifestage/youngadults/) |
+| EHG, singles | up to $60,000, ceiling $4,500 (16 bands) | HDB PDF "EHG amount Singles" |
 | HDB loan rate | 2.6% p.a. | [EdgeProp](https://www.edgeprop.sg/property-news/guide-hdb-concessionary-housing-loan) |
 | LTV / MSR | 75% / 30% | [ShopBack](https://www.shopback.sg/blog/finance/hdb-vs-bank-loan), confirmed on HDB "Housing Loan from HDB" |
 | Loan assessment rate floor | 3.0% (loan sized at the higher of this and 2.6%) | [HDB press release](https://www.hdb.gov.sg/about-us/news-and-publications/press-releases/29092022-propertymeasures2022) |
 | Loan tenure | shortest of 25 years and 65 minus average age | HDB "Housing Loan from HDB" (updated 23 Aug 2026) |
 | Buyer's stamp duty | 1% / 2% / 3% / 4% up to $1.5M | HDB resale approval page (updated 18 Aug 2026) |
 | Mortgage stamp duty | 0.4% of loan, max $500 | same |
+| Option fee | $500 (2-room Flexi) / $1,000 (3-room) / $2,000 (4-room+) | HDB Annex B, Feb 2026 BTO exercise |
 | BTO application fee | $10 | HDB "Application for a New Flat" (updated 22 Oct 2026) |
 | Tengah Garden Ave 4-room | ~$360k–$380k indicative (Nov 2026 exercise) | [SG Property Index](https://sgpropertyindex.com/launches/bto/tengah-garden-avenue/) |
 
-Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, option fee, legal estimate) are shown as warnings in the app until confirmed on hdb.gov.sg and iras.gov.sg.
+Values marked `verified: false` in `policy_2026.yaml` (currently only the legal fee estimate) are shown as warnings in the app until confirmed on hdb.gov.sg and iras.gov.sg.
 
 ## Tested scenarios
 
@@ -83,7 +85,7 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, option
 `tests/test_app.py` runs the Streamlit app headlessly in calculator mode with the 3 examples, live slider updates (hand-checked numbers) and asserts the API client is never created.
 
 ```
-68 passed
+78 passed
 ```
 
 ## Run it
@@ -92,7 +94,7 @@ Values marked `verified: false` in `policy_2026.yaml` (singles EHG bands, option
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pytest                             # 68 tests, no API key needed
+pytest                             # 78 tests, no API key needed
 streamlit run app.py               # web app, free calculator mode
 
 # Optional, paid: chat mode
@@ -121,6 +123,7 @@ bto-agent/
 
 - Prices for the November 2026 exercise are indicative until HDB publishes them at launch.
 - Assumes first-timers and that current income equals the 12-month average HDB uses.
+- Two or more singles buying together (family grant table, $9,000 ceiling) is not modelled yet.
 - Does not model the Proximity Housing Grant (resale only), resale flats, bank loans or ECs.
 - Downpayment staging (signing vs key collection) is not modelled; the tool shows the total.
 

@@ -76,10 +76,11 @@ def test_example_one_income_msr_binds(no_key):
     assert any("30% mortgage servicing ratio" in c.value for c in at.caption)
 
 
-def test_example_single_runs_and_warns(no_key):
+def test_example_single_hand_checked(no_key):
     at = click(start(), "🧑  Single, 36 · $4k")
     assert verdict_html(at)
-    assert at.warning  # unverified singles EHG bands are flagged
+    assert {m.label: m.value for m in at.metric}["Grant (EHG)"] == "$10,000"  # singles $3,751-$4,000 band
+    assert at.warning  # the legal fee estimate is still flagged
 
 
 def test_sliders_update_live(no_key):

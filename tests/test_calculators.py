@@ -52,10 +52,10 @@ def test_ehg_second_timers_get_none():
     assert get_ehg_grant("family", 3000, first_timers=False)["grant"] == 0
 
 
-def test_ehg_singles_half_scale_and_flagged():
-    r = get_ehg_grant("single", 4000)  # half of family $8,000 band -> $10,000
+def test_ehg_singles_verified():
+    r = get_ehg_grant("single", 4000)  # HDB singles table: $3,751-$4,000 -> $10,000
     assert r["grant"] == 10000
-    assert r["verified"] is False
+    assert r["verified"] is True
     assert get_ehg_grant("single", 4600)["grant"] == 0
 
 
@@ -180,3 +180,19 @@ def test_sourced_items_cover_unverified_items():
     items = policy.sourced_items()
     assert {i["rule"] for i in items if not i["verified"]} == set(policy.unverified_items())
     assert any(i["rule"] == "hdb_loan.assessment_rate_floor" and i["verified"] for i in items)
+
+
+def test_singles_ehg_table_is_half_scale_of_family():
+    # HDB's singles PDF: every band is the family band at half the income and half the grant
+    family, single = policy.node("ehg", "family")["bands"], policy.node("ehg", "single")["bands"]
+    assert [(b["max_income"] * 2, b["grant"] * 2) for b in single] == [(b["max_income"], b["grant"]) for b in family]
+
+
+@pytest.mark.parametrize("income, grant", [(750, 60000), (751, 55000), (4000, 10000), (4500, 2500), (4501, 0)])
+def test_singles_ehg_bands_hand_checked(income, grant):
+    assert get_ehg_grant("single", income)["grant"] == grant
+
+
+@pytest.mark.parametrize("flat_type, fee", [("2-room", 500), ("3-room", 1000), ("4-room", 2000), ("5-room", 2000)])
+def test_option_fee_matches_hdb_annex_b(flat_type, fee):
+    assert upfront_costs(300000, flat_type)["option_fee"] == fee

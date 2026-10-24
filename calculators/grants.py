@@ -4,15 +4,6 @@ from __future__ import annotations
 from . import policy
 
 
-def _family_bands() -> list[dict]:
-    return policy.node("ehg", "family")["bands"]
-
-
-def _single_bands() -> list[dict]:
-    """Singles table = family table at half the income bands and half the grant (assumption, flagged)."""
-    return [{"max_income": b["max_income"] / 2, "grant": b["grant"] / 2} for b in _family_bands()]
-
-
 def get_ehg_grant(household_type: str, monthly_household_income: float, first_timers: bool = True) -> dict:
     """Return the EHG amount for an average gross monthly household income."""
     if not first_timers:
@@ -24,7 +15,7 @@ def get_ehg_grant(household_type: str, monthly_household_income: float, first_ti
         }
 
     cfg = policy.node("ehg", household_type)
-    bands = _family_bands() if household_type == "family" else _single_bands()
+    bands = cfg["bands"]
     ceiling = cfg["income_ceiling"]
 
     if monthly_household_income > ceiling:

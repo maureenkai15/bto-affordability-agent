@@ -59,13 +59,30 @@ ehg:
       - {max_income: 8500, grant: 10000}
       - {max_income: 9000, grant: 5000}
   single:
-    # Singles scheme mirrors the family table at half the income bands and half the grant.
-    # Max $60,000 and ceiling $4,500 are confirmed; the half-scale band structure is an ASSUMPTION to verify.
+    # Single applicant buying alone (or single child 35+ with parents). Two or more singles buying together use the
+    # family table with a $9,000 ceiling instead; that case is not modelled.
     income_ceiling: 4500
-    max_grant: 60000
-    derive_from_family_at_half_scale: true
-    source_url: "https://propertynet.sg/enhanced-cpf-housing-grant-ehg-2026-income-tiers-payouts/"
-    verified: false
+    effective_from: "2024-08-20"
+    source_url: "https://www.hdb.gov.sg"
+    confirmed_by: 'HDB PDF "EHG amount Singles" (page 1 of 3) and HDB "Enhanced CPF Housing Grant for Singles" page (last updated 20 Aug 2026); checked 24 Oct 2026'
+    verified: true
+    bands:
+      - {max_income: 750, grant: 60000}
+      - {max_income: 1000, grant: 55000}
+      - {max_income: 1250, grant: 52500}
+      - {max_income: 1500, grant: 47500}
+      - {max_income: 1750, grant: 45000}
+      - {max_income: 2000, grant: 40000}
+      - {max_income: 2250, grant: 35000}
+      - {max_income: 2500, grant: 32500}
+      - {max_income: 2750, grant: 27500}
+      - {max_income: 3000, grant: 25000}
+      - {max_income: 3250, grant: 20000}
+      - {max_income: 3500, grant: 15000}
+      - {max_income: 3750, grant: 12500}
+      - {max_income: 4000, grant: 10000}
+      - {max_income: 4250, grant: 5000}
+      - {max_income: 4500, grant: 2500}
 
 hdb_loan:
   interest_rate:
@@ -102,15 +119,16 @@ hdb_loan:
   tenure_age_limit:
     value: 65
     note: "Repayment period is the shortest of 25 years, 65 minus the AVERAGE age of the applicants, and remaining lease minus 20 years. The lease cap cannot bind for a new 99-year flat, so it is not modelled. Fractional years are rounded down (assumption)."
-    source_url: "https://www.hdb.gov.sg"
+    source_url: "https://www.hdb.gov.sg/buying-a-flat/flat-grant-and-loan-eligibility/housing-loan/housing-loan-from-hdb"
     confirmed_by: 'HDB "Housing Loan from HDB" page, Details on the HDB housing loan (last updated 23 Aug 2026; text checked 24 Oct 2026)'
     verified: true
 
 upfront:
   option_fee:
-    note: "BTO option fee by flat type."
+    note: "BTO option fee by flat type. Forms part of the downpayment."
     source_url: "https://www.hdb.gov.sg"
-    verified: false
+    confirmed_by: 'HDB Annex B, Administrative details for February 2026 BTO and SBF exercises, para 14; checked 24 Oct 2026'
+    verified: true
     by_flat_type:
       2-room: 500
       3-room: 1000

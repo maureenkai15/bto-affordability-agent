@@ -48,7 +48,7 @@ def test_5_one_income_msr_binds():
 def test_6_single_35_plus():
     r = run(household_type="single", incomes=[4000], ages=[36], cpf_oa_balances=[60000], cash_savings=30000)
     assert r["eligibility"]["eligible"] is True
-    assert any("Singles EHG" in w for w in r["warnings"])
+    assert r["grant"]["grant"] == 10000   # HDB singles table: $3,751-$4,000 -> $10,000
 
 
 def test_7_citizen_plus_pr_is_flagged():

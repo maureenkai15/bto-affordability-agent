@@ -118,7 +118,7 @@ def _warnings(ehg: dict) -> list[str]:
     if policy.is_stale():
         w.append(f"Policy file is older than {policy.value('meta', 'stale_after_days')} days. Re-check HDB rules.")
     if ehg.get("verified") is False:
-        w.append("Singles EHG bands are an estimate (half-scale of the family table). Confirm with HDB.")
+        w.append("The EHG table used here is not yet verified. Confirm the grant with HDB.")
     unverified = policy.unverified_items()
     if unverified:
         w.append("Some values are placeholders to confirm: " + ", ".join(unverified))
